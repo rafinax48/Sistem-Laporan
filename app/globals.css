@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #14212e;
+  --ink-soft: #5b6b7c;
+  --paper: #f4f6f5;
+  --card: #ffffff;
+  --line: #dde3e4;
+  --red: #c0392b;
+  --amber: #b07d1b;
+  --green: #1e7a46;
+  --hint: #eef1f0;
+}
+
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-paper: var(--paper);
+  --color-card: var(--card);
+  --color-line: var(--line);
+  --color-red: var(--red);
+  --color-amber: var(--amber);
+  --color-green: var(--green);
+  --color-hint: var(--hint);
+
+  --font-sans: var(--font-source), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
+  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-source), ui-sans-serif, system-ui, sans-serif;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--red) 20%, transparent);
+}
+
+:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+enum ReportKind {
+  STUDENT
+  REFERENCE
+}
+
+model Report {
+  id          String      @id @default(cuid())
+  kind        ReportKind
+  topic       String?
+  studentName String?
+  fileName    String
+  filePath    String
+  fileType    String
+  rawText     String?
+  createdAt   DateTime    @default(now())
+
+  subjectOf Assessment?  @relation("Subject")
+  usedAsRef Assessment[] @relation("Reference")
+
+  @@index([kind])
+  @@index([topic])
+}
+
+model Assessment {
+  id                String     @id @default(cuid())
+  reportId          String     @unique
+  report            Report     @relation("Subject", fields: [reportId], references: [id], onDelete: Cascade)
+  referenceReportId String?
+  referenceReport   Report?    @relation("Reference", fields: [referenceReportId], references: [id])
+  overallScore      Int?
+  categories        AssessmentCategory[]
+  createdAt         DateTime   @default(now())
+}
+
+model AssessmentCategory {
+  id           String     @id @default(cuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  name         String
+  score        Int
+  comment      String
+  suggestion   String
+
+  @@index([assessmentId])
+}

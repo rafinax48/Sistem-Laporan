@@ -1,0 +1,56 @@
+{
+  "name": "sistem-laporan",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx --tsconfig tsconfig.json scripts/test/band.test.ts",
+    "fixtures": "tsx --tsconfig tsconfig.json scripts/make-fixtures.ts",
+    "smoke": "tsx --tsconfig tsconfig.json scripts/smoke.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:reset": "prisma migrate reset --force",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@ai-sdk/google": "^4.0.39",
+    "@prisma/adapter-better-sqlite3": "^7.9.1",
+    "@prisma/client": "^7.9.1",
+    "ai": "^7.0.58",
+    "mammoth": "^1.12.0",
+    "next": "16.3.0",
+    "pdf-parse": "^2.4.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/pdfkit": "^0.17.6",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "docx": "^9.7.1",
+    "dotenv": "^17.4.2",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "pdfkit": "^0.19.1",
+    "prisma": "^7.9.1",
+    "sharp": "^0.35.3",
+    "tailwindcss": "^4",
+    "tsx": "^4.23.11",
+    "typescript": "^5"
+  },
+  "allowScripts": {
+    "prisma@7.9.1": true,
+    "@prisma/engines@7.9.1": true,
+    "sharp@0.35.3": true,
+    "esbuild@0.28.2": true,
+    "unrs-resolver": true,
+    "better-sqlite3@12.11.1": true
+  }
+}
