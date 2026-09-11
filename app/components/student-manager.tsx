@@ -51,6 +51,60 @@ export default function StudentManager({
   // State Hapus Praktikan
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
+  // State Edit Praktikan
+  const [editingStudent, setEditingStudent] = useState<StudentItem | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editNim, setEditNim] = useState("");
+  const [editClass, setEditClass] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const startEdit = (student: StudentItem) => {
+    setEditingStudent(student);
+    setEditName(student.name);
+    setEditNim(student.nim);
+    setEditClass(student.className);
+    setEditError(null);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    setEditError(null);
+
+    if (!editName.trim() || !editNim.trim() || !editClass.trim()) {
+      setEditError("Nama, NIM, dan Kelas wajib diisi seluruhnya.");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/practicums/${practicumId}/students/${editingStudent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName.trim(),
+          nim: editNim.trim(),
+          className: editClass.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Gagal memperbarui data praktikan.");
+      }
+
+      const updated = students.map((s) => (s.id === editingStudent.id ? data.student : s));
+      setStudents(updated);
+      setEditingStudent(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
+      setEditError(msg);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   // Handle Tambah Manual
   const handleManualSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -404,7 +458,14 @@ export default function StudentManager({
                         {st.className}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-right">
+                    <td className="px-4 py-2.5 text-right space-x-3">
+                      <button
+                        type="button"
+                        onClick={() => startEdit(st)}
+                        className="font-mono text-[11px] text-ink font-semibold underline-offset-2 hover:text-red hover:underline"
+                      >
+                        Edit
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleDeleteStudent(st.id)}
@@ -421,6 +482,105 @@ export default function StudentManager({
           </div>
         )}
       </div>
+
+      {/* Modal Edit Praktikan */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-line bg-card p-6 shadow-xl space-y-4">
+            <div className="flex items-start justify-between border-b border-line pb-3">
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-wider text-red">
+                  Koreksi Data
+                </span>
+                <h3 className="font-serif text-lg font-semibold text-ink">
+                  Edit Data Praktikan
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingStudent(null)}
+                className="text-xs text-ink-soft hover:text-ink font-mono"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+
+            {editError && (
+              <div className="rounded-md border border-red/30 bg-[#FBEBEA] p-3 text-xs text-red">
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft">
+                  Nama Mahasiswa *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Contoh: Dimas Pratama Anugraha"
+                  className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 text-xs text-ink focus:border-red focus:outline-none"
+                />
+                <p className="mt-1 text-[11px] text-ink-soft">
+                  Awal tiap kata akan diformat otomatis menjadi huruf kapital.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft">
+                  NIM *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editNim}
+                  onChange={(e) => setEditNim(e.target.value)}
+                  placeholder="Contoh: 2400018215"
+                  className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 text-xs font-mono text-ink focus:border-red focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft">
+                  Kelas *
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={1}
+                  value={editClass}
+                  onChange={(e) => setEditClass(e.target.value.toUpperCase())}
+                  placeholder="Contoh: A, B, atau C"
+                  className="mt-1 w-24 rounded-md border border-line bg-paper px-3 py-2 text-xs font-mono font-bold text-center text-ink focus:border-red focus:outline-none uppercase"
+                />
+                <p className="mt-1 text-[11px] text-ink-soft">
+                  Tepat 1 karakter alfabet (otomatis huruf kapital).
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="rounded-md border border-line bg-hint px-3 py-1.5 text-xs text-ink hover:border-ink-soft"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="rounded-md bg-red px-4 py-1.5 font-mono text-xs text-white hover:bg-red-dark disabled:opacity-50"
+                >
+                  {savingEdit ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

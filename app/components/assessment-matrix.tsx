@@ -35,10 +35,11 @@ export default function AssessmentMatrix({
   practicumName,
   practicumSlot,
   totalMeetings,
-  students,
+  students: initialStudents,
   initialMatrix,
   referenceTopics,
 }: AssessmentMatrixProps) {
+  const [studentList, setStudentList] = useState<StudentData[]>(initialStudents);
   const [matrix, setMatrix] = useState(initialMatrix);
   const [search, setSearch] = useState("");
   const [, startTransition] = useTransition();
@@ -54,8 +55,63 @@ export default function AssessmentMatrix({
   const [modalError, setModalError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // State Modal Edit Data Praktikan
+  const [editingStudent, setEditingStudent] = useState<StudentData | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editNim, setEditNim] = useState("");
+  const [editClass, setEditClass] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+
+  const startEditStudent = (st: StudentData) => {
+    setEditingStudent(st);
+    setEditName(st.name);
+    setEditNim(st.nim);
+    setEditClass(st.className);
+    setEditError(null);
+  };
+
+  const handleEditStudentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStudent) return;
+    setEditError(null);
+
+    if (!editName.trim() || !editNim.trim() || !editClass.trim()) {
+      setEditError("Nama, NIM, dan Kelas wajib diisi seluruhnya.");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await fetch(`/api/practicums/${practicumId}/students/${editingStudent.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName.trim(),
+          nim: editNim.trim(),
+          className: editClass.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Gagal memperbarui data praktikan.");
+      }
+
+      setStudentList((prev) =>
+        prev.map((s) => (s.id === editingStudent.id ? { ...s, ...data.student } : s))
+      );
+      setEditingStudent(null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
+      setEditError(msg);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
   // Filter Mahasiswa
-  const filteredStudents = students.filter((s) => {
+  const filteredStudents = studentList.filter((s) => {
     if (!search.trim()) return true;
     const q = search.toLowerCase();
     return s.name.toLowerCase().includes(q) || s.nim.toLowerCase().includes(q) || s.className.toLowerCase().includes(q);
@@ -174,7 +230,7 @@ export default function AssessmentMatrix({
           </h2>
           <p className="text-xs text-ink-soft">
             Jadwal: <span className="font-semibold text-ink">{practicumSlot}</span> · Total:{" "}
-            <b className="font-mono text-ink">{students.length}</b> Praktikan ·{" "}
+            <b className="font-mono text-ink">{studentList.length}</b> Praktikan ·{" "}
             <b className="font-mono text-ink">{totalMeetings}</b> Pertemuan
           </p>
         </div>
@@ -192,7 +248,7 @@ export default function AssessmentMatrix({
       </div>
 
       {/* Grid Matriks Ala Excel */}
-      {students.length === 0 ? (
+      {studentList.length === 0 ? (
         <div className="rounded-lg border border-line bg-card px-5 py-12 text-center space-y-3">
           <p className="font-serif text-lg font-semibold text-ink">
             Belum Ada Praktikan Terdaftar
@@ -257,8 +313,20 @@ export default function AssessmentMatrix({
                       </td>
 
                       {/* Sticky Kolom Nama */}
-                      <td className="sticky left-[150px] z-10 bg-card group-hover:bg-hint/40 px-4 py-3 font-medium text-ink border-r border-line truncate max-w-[220px]">
-                        {st.name}
+                      <td className="sticky left-[150px] z-10 bg-card group-hover:bg-hint/40 px-4 py-3 font-medium text-ink border-r border-line max-w-[220px]">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="truncate" title={st.name}>
+                            {st.name}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => startEditStudent(st)}
+                            title="Edit nama, NIM, atau kelas praktikan ini"
+                            className="inline-flex shrink-0 items-center gap-0.5 rounded px-1.5 py-0.5 font-mono text-[10px] text-ink-soft opacity-40 hover:opacity-100 hover:bg-hint hover:text-red transition-all"
+                          >
+                            ✎ Edit
+                          </button>
+                        </div>
                       </td>
 
                       {/* Kolom Kelas */}
@@ -438,6 +506,105 @@ export default function AssessmentMatrix({
                   ) : (
                     "Nilai Laporan Sekarang"
                   )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Edit Data Praktikan */}
+      {editingStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md rounded-xl border border-line bg-card p-6 shadow-xl space-y-4">
+            <div className="flex items-start justify-between border-b border-line pb-3">
+              <div>
+                <span className="font-mono text-[11px] uppercase tracking-wider text-red">
+                  Koreksi Data
+                </span>
+                <h3 className="font-serif text-lg font-semibold text-ink">
+                  Edit Data Praktikan
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingStudent(null)}
+                className="text-xs text-ink-soft hover:text-ink font-mono"
+              >
+                ✕ Tutup
+              </button>
+            </div>
+
+            {editError && (
+              <div className="rounded-md border border-red/30 bg-[#FBEBEA] p-3 text-xs text-red">
+                {editError}
+              </div>
+            )}
+
+            <form onSubmit={handleEditStudentSubmit} className="space-y-4">
+              <div>
+                <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft">
+                  Nama Mahasiswa *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Contoh: Dimas Pratama Anugraha"
+                  className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 text-xs text-ink focus:border-red focus:outline-none"
+                />
+                <p className="mt-1 text-[11px] text-ink-soft">
+                  Awal tiap kata akan diformat otomatis menjadi huruf kapital.
+                </p>
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft">
+                  NIM *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editNim}
+                  onChange={(e) => setEditNim(e.target.value)}
+                  placeholder="Contoh: 2400018215"
+                  className="mt-1 w-full rounded-md border border-line bg-paper px-3 py-2 text-xs font-mono text-ink focus:border-red focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs uppercase tracking-wider text-ink-soft">
+                  Kelas *
+                </label>
+                <input
+                  type="text"
+                  required
+                  maxLength={1}
+                  value={editClass}
+                  onChange={(e) => setEditClass(e.target.value.toUpperCase())}
+                  placeholder="Contoh: A, B, atau C"
+                  className="mt-1 w-24 rounded-md border border-line bg-paper px-3 py-2 text-xs font-mono font-bold text-center text-ink focus:border-red focus:outline-none uppercase"
+                />
+                <p className="mt-1 text-[11px] text-ink-soft">
+                  Tepat 1 karakter alfabet (otomatis huruf kapital).
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+                <button
+                  type="button"
+                  onClick={() => setEditingStudent(null)}
+                  className="rounded-md border border-line bg-hint px-3 py-1.5 text-xs text-ink hover:border-ink-soft"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingEdit}
+                  className="rounded-md bg-red px-4 py-1.5 font-mono text-xs text-white hover:bg-red-dark disabled:opacity-50"
+                >
+                  {savingEdit ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>
               </div>
             </form>
