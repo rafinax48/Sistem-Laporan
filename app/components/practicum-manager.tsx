@@ -29,6 +29,7 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
   const [name, setName] = useState("");
   const [slot, setSlot] = useState("");
   const [totalMeetings, setTotalMeetings] = useState(8);
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [formSuccess, setFormSuccess] = useState<string | null>(null);
@@ -42,12 +43,13 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
     setFormSuccess(null);
 
     if (!name.trim() || !slot.trim()) {
-      setFormError("Nama praktikum dan slot wajib diisi.");
+      setFormError("Nama praktikum dan slot wajib diisi terlebih dahulu.");
       return;
     }
 
     setCreating(true);
     try {
+      // 1. Buat Praktikum
       const res = await fetch("/api/practicums", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -63,16 +65,44 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
         throw new Error(data.error || "Gagal membuat praktikum.");
       }
 
+      let studentCount = 0;
+
+      // 2. Jika ada berkas praktikan yang dilampirkan, import sekaligus
+      if (attachedFile) {
+        const formData = new FormData();
+        formData.append("file", attachedFile);
+
+        const uploadRes = await fetch(`/api/practicums/${data.practicum.id}/students`, {
+          method: "POST",
+          body: formData,
+        });
+
+        const uploadData = await uploadRes.json();
+        if (!uploadRes.ok) {
+          throw new Error(
+            `Praktikum berhasil dibuat, namun berkas gagal diimpor: ${
+              uploadData.error || "Validasi berkas gagal."
+            }`
+          );
+        }
+        studentCount = uploadData.count || 0;
+      }
+
       const newPracticum: PracticumWithCount = {
         ...data.practicum,
-        _count: { students: 0, reports: 0 },
+        _count: { students: studentCount, reports: 0 },
       };
 
       setPracticums([newPracticum, ...practicums]);
       setName("");
       setSlot("");
       setTotalMeetings(8);
-      setFormSuccess(`Praktikum "${newPracticum.name}" berhasil dibuat.`);
+      setAttachedFile(null);
+      setFormSuccess(
+        `Praktikum "${newPracticum.name}" berhasil dibuat${
+          studentCount > 0 ? ` bersama ${studentCount} praktikan dari berkas.` : "."
+        }`
+      );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Terjadi kesalahan.";
       setFormError(msg);
@@ -134,7 +164,7 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
     <div className="space-y-10">
       {/* Panel Kelola Praktikan Aktif (Jika dipilih) */}
       {selectedPracticum && (
-        <div className="rounded-xl border-2 border-line bg-card p-6 shadow-[0_2px_4px_rgba(20,33,46,0.06)]">
+        <div className="rounded-xl border-2 border-red bg-card p-6 shadow-[0_2px_4px_rgba(192,57,43,0.1)]">
           {loadingStudents ? (
             <div className="py-10 text-center text-xs font-mono text-ink-soft">
               Memuat data praktikan...
@@ -152,13 +182,17 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
       )}
 
       {/* Form Buat Praktikum Baru */}
-      <div className="rounded-lg border border-line bg-card p-6">
-        <h2 className="font-serif text-xl font-semibold text-ink">Tambah Praktikum Baru</h2>
-        <p className="mt-1 text-xs text-ink-soft">
-          Definisikan mata kuliah praktikum, slot waktu/shift, serta jumlah pertemuan yang ditampung.
-        </p>
+      <div className="rounded-lg border border-line bg-card p-6 shadow-[0_1px_2px_rgba(20,33,46,0.04)]">
+        <div className="flex items-center justify-between border-b border-line pb-3">
+          <div>
+            <h2 className="font-serif text-xl font-semibold text-ink">1. Tambah Praktikum Baru</h2>
+            <p className="mt-1 text-xs text-ink-soft">
+              Isi data praktikum di bawah. Anda juga bisa langsung melampirkan berkas Excel/CSV/SVG di form ini.
+            </p>
+          </div>
+        </div>
 
-        <form onSubmit={handleCreatePracticum} className="mt-5 space-y-4">
+        <form onSubmit={handleCreatePracticum} className="mt-5 space-y-5">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
               <label className="block font-mono text-[11px] uppercase tracking-wider text-ink-soft mb-1">
@@ -201,6 +235,38 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
             </div>
           </div>
 
+          {/* Opsi Unggah Berkas Praktikan Sekaligus */}
+          <div className="rounded-lg border border-line bg-hint/30 p-4 space-y-2">
+            <label className="block font-mono text-[11px] uppercase tracking-wider text-ink font-semibold">
+              📁 Lampirkan Berkas Praktikan Langsung (Opsional)
+            </label>
+            <p className="text-xs text-ink-soft">
+              Pilih berkas <b>Excel (.xlsx, .xls)</b>, <b>CSV (.csv)</b>, atau <b>SVG (.svg)</b>. Berkas wajib memuat kolom yang memiliki unsur kata <code>nama</code>, <code>nim</code>, dan <code>kelas</code>.
+            </p>
+            <div className="flex items-center gap-3 pt-1">
+              <input
+                type="file"
+                id="practicum-file-upload"
+                accept=".xlsx,.xls,.csv,.svg"
+                onChange={(e) => setAttachedFile(e.target.files?.[0] || null)}
+                className="text-xs file:mr-3 file:rounded-md file:border file:border-line file:bg-card file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink hover:file:border-red"
+              />
+              {attachedFile && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAttachedFile(null);
+                    const inputEl = document.getElementById("practicum-file-upload") as HTMLInputElement;
+                    if (inputEl) inputEl.value = "";
+                  }}
+                  className="font-mono text-xs text-red underline-offset-2 hover:underline"
+                >
+                  Batal Lampirkan
+                </button>
+              )}
+            </div>
+          </div>
+
           {formError && (
             <div className="rounded-md border border-red/30 bg-[#FBECEA] p-3 text-xs text-red">
               {formError}
@@ -235,11 +301,14 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
         </div>
 
         {practicums.length === 0 ? (
-          <div className="rounded-lg border border-line bg-card px-5 py-10 text-center">
-            <p className="font-serif text-lg font-semibold text-ink">Belum ada praktikum</p>
-            <p className="mt-1 text-sm text-ink-soft">
-              Gunakan formulir di atas untuk membuat praktikum baru beserta slot jadwalnya.
+          <div className="rounded-lg border border-line bg-card px-5 py-10 text-center space-y-2">
+            <p className="font-serif text-lg font-semibold text-ink">Belum Ada Praktikum</p>
+            <p className="text-xs text-ink-soft max-w-md mx-auto leading-relaxed">
+              Praktikan harus berada di bawah mata kuliah / praktikum tertentu. Silakan isi <b>Nama Praktikum</b> dan <b>Slot Waktu</b> di formulir di atas terlebih dahulu.
             </p>
+            <div className="pt-2 text-xs text-ink">
+              💡 <i>Tips: Anda bisa langsung melampirkan berkas Excel/CSV/SVG pada bagian <b>Lampirkan Berkas</b> di atas saat membuat praktikum!</i>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -275,9 +344,13 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
                     <button
                       type="button"
                       onClick={() => handleOpenStudents(p)}
-                      className="font-medium text-ink underline-offset-2 hover:text-red hover:underline"
+                      className={`inline-flex items-center gap-1 rounded px-3 py-1.5 font-mono text-[11px] font-semibold transition-colors ${
+                        isSelected
+                          ? "bg-red text-white"
+                          : "bg-ink text-white hover:bg-red"
+                      }`}
                     >
-                      {isSelected ? "Sedang Dikelola ↑" : "Kelola Praktikan →"}
+                      {isSelected ? "Sedang Dibuka ↑" : "+ Kelola / Tambah Praktikan"}
                     </button>
                     <button
                       type="button"
