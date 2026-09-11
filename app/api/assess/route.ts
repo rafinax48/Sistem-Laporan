@@ -27,10 +27,39 @@ export async function POST(request: NextRequest) {
   const topicInput = form.get("topic");
   const topic = typeof topicInput === "string" ? topicInput.trim() || null : null;
   const studentNameInput = form.get("studentName");
-  const studentName =
+  let studentName =
     typeof studentNameInput === "string" && studentNameInput.trim()
       ? studentNameInput.trim()
       : null;
+
+  const practicumId = typeof form.get("practicumId") === "string" ? (form.get("practicumId") as string) : null;
+  const studentId = typeof form.get("studentId") === "string" ? (form.get("studentId") as string) : null;
+  const meetingNumberRaw = form.get("meetingNumber");
+  const meetingNumber = meetingNumberRaw ? Number(meetingNumberRaw) : null;
+
+  // Jika studentId diberikan, ambil nama praktikan dari database jika belum diisi
+  if (studentId) {
+    const student = await prisma.student.findUnique({ where: { id: studentId } });
+    if (student) {
+      studentName = student.name;
+    }
+  }
+
+  // Jika praktikan dan pertemuan tertentu sudah pernah dinilai, bersihkan laporan lama (Perbaikan Laporan)
+  if (studentId && meetingNumber !== null) {
+    const existingReports = await prisma.report.findMany({
+      where: {
+        studentId,
+        meetingNumber,
+        kind: "STUDENT",
+      },
+      select: { id: true },
+    });
+
+    for (const oldRep of existingReports) {
+      await prisma.report.delete({ where: { id: oldRep.id } });
+    }
+  }
 
   let files: FileEntry[];
   try {
@@ -89,6 +118,9 @@ export async function POST(request: NextRequest) {
           filePath,
           fileType: file.type || mediaTypeOf(file.name),
           rawText: parsed.rawText || parsed.text,
+          practicumId: practicumId || null,
+          studentId: studentId || null,
+          meetingNumber: meetingNumber !== null ? meetingNumber : null,
         },
       });
 
