@@ -256,15 +256,19 @@ export default function StudentManager({
 
             <div>
               <label className="block font-mono text-[11px] uppercase tracking-wider text-ink-soft mb-1">
-                Kelas *
+                Kelas * (1 Huruf Alfabet: A, B, C, dst.)
               </label>
               <input
                 type="text"
-                placeholder="cth. IF-45-02"
+                maxLength={4}
+                placeholder="cth. A"
                 value={manualClass}
-                onChange={(e) => setManualClass(e.target.value)}
-                className="w-full rounded-md border border-line px-3 py-2 text-sm text-ink placeholder:text-ink-soft focus:border-red focus:outline-none focus:ring-1 focus:ring-red"
+                onChange={(e) => setManualClass(e.target.value.toUpperCase())}
+                className="w-full rounded-md border border-line px-3 py-2 font-mono text-sm text-ink placeholder:text-ink-soft focus:border-red focus:outline-none focus:ring-1 focus:ring-red"
               />
+              <span className="mt-1 block text-[10px] text-ink-soft">
+                Hanya 1 karakter alfabet (otomatis kapital).
+              </span>
             </div>
           </div>
 
@@ -295,13 +299,15 @@ export default function StudentManager({
       {/* Tab Konten: Upload Berkas dengan Validator */}
       {activeTab === "file" && (
         <div className="rounded-lg border border-line bg-card p-5 space-y-4">
-          <div className="rounded-md border border-line bg-hint/50 p-3 text-xs text-ink-soft space-y-1.5">
-            <p className="font-semibold text-ink">📋 Aturan Validator Kolom Berkas:</p>
-            <ul className="list-disc list-inside space-y-0.5">
+          <div className="rounded-md border border-line bg-hint/50 p-3.5 text-xs text-ink-soft space-y-2">
+            <p className="font-semibold text-ink">📋 Aturan Validator & Format Berkas Praktikan:</p>
+            <ul className="list-disc list-inside space-y-1">
               <li>Mendukung berkas <b>Excel (.xlsx, .xls)</b>, <b>CSV (.csv)</b>, dan <b>SVG (.svg)</b>.</li>
-              <li>Wajib memiliki kolom yang mengandung kata <b>&ldquo;nama&rdquo;</b> (misal: <i>Nama</i>, <i>Nama Mahasiswa</i>).</li>
-              <li>Wajib memiliki kolom yang mengandung kata <b>&ldquo;nim&rdquo;</b> (misal: <i>NIM</i>, <i>Nomor Induk Mahasiswa</i>).</li>
-              <li>Wajib memiliki kolom yang mengandung kata <b>&ldquo;kelas&rdquo;</b> (misal: <i>Kelas</i>, <i>Nama Kelas</i>).</li>
+              <li>Wajib ada kolom yang mengandung kata <b>&ldquo;nama&rdquo;</b> (tiap awal kata otomatis kapital).</li>
+              <li>Wajib ada kolom yang mengandung kata <b>&ldquo;nim&rdquo;</b>.</li>
+              <li>
+                Wajib ada kolom yang mengandung kata <b>&ldquo;kelas&rdquo;</b> (harus memiliki <b>1 karakter alfabet</b> saja, misal <code>A</code>, <code>B</code>, <code>C</code>; jika huruf kecil otomatis diubah menjadi huruf kapital).
+              </li>
             </ul>
           </div>
 

@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { parseAndValidateStudentFile } from "@/lib/student-importer";
+import {
+  parseAndValidateStudentFile,
+  formatStudentName,
+  validateAndFormatClass,
+} from "@/lib/student-importer";
 
 export async function GET(
   _request: NextRequest,
@@ -94,36 +98,48 @@ export async function POST(
 
     // 2. Mode Input Manual (JSON: name, nim, className)
     const body = await request.json();
-    const name = String(body.name || "").trim();
-    const nim = String(body.nim || "").trim();
-    const className = String(body.className || "").trim();
+    const rawName = String(body.name || "").trim();
+    const rawNim = String(body.nim || "").trim();
+    const rawClass = String(body.className || "").trim();
 
-    if (!name) {
+    if (!rawName) {
       return NextResponse.json(
         { error: "Nama praktikan wajib diisi." },
         { status: 400 }
       );
     }
 
-    if (!nim) {
+    if (!rawNim) {
       return NextResponse.json(
         { error: "NIM praktikan wajib diisi." },
         { status: 400 }
       );
     }
 
-    if (!className) {
+    if (!rawClass) {
       return NextResponse.json(
         { error: "Kelas praktikan wajib diisi." },
         { status: 400 }
       );
     }
 
+    // Validasi kelas: harus ada tepat 1 karakter alfabet
+    const classCheck = validateAndFormatClass(rawClass);
+    if (!classCheck.valid) {
+      return NextResponse.json(
+        { error: classCheck.error },
+        { status: 400 }
+      );
+    }
+
+    const name = formatStudentName(rawName);
+    const className = classCheck.formatted;
+
     const student = await prisma.student.create({
       data: {
         practicumId,
         name,
-        nim,
+        nim: rawNim,
         className,
       },
     });

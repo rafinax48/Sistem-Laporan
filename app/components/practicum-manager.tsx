@@ -29,6 +29,7 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
   const [name, setName] = useState("");
   const [slot, setSlot] = useState("");
   const [totalMeetings, setTotalMeetings] = useState(8);
+  const [importOption, setImportOption] = useState<"no" | "yes">("no");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [creating, setCreating] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -235,36 +236,75 @@ export default function PracticumManager({ initialPracticums }: PracticumManager
             </div>
           </div>
 
-          {/* Opsi Unggah Berkas Praktikan Sekaligus */}
-          <div className="rounded-lg border border-line bg-hint/30 p-4 space-y-2">
+          {/* Opsi Pilihan: Langsung Masukkan Data Praktikan atau Tidak */}
+          <div className="rounded-lg border border-line bg-hint/20 p-4 space-y-3">
             <label className="block font-mono text-[11px] uppercase tracking-wider text-ink font-semibold">
-              📁 Lampirkan Berkas Praktikan Langsung (Opsional)
+              Opsi Data Praktikan:
             </label>
             <p className="text-xs text-ink-soft">
-              Pilih berkas <b>Excel (.xlsx, .xls)</b>, <b>CSV (.csv)</b>, atau <b>SVG (.svg)</b>. Berkas wajib memuat kolom yang memiliki unsur kata <code>nama</code>, <code>nim</code>, dan <code>kelas</code>.
+              Pilih apakah Anda ingin langsung melampirkan berkas data praktikan (Nama, NIM, Kelas) sekarang atau mengisi nanti:
             </p>
-            <div className="flex items-center gap-3 pt-1">
-              <input
-                type="file"
-                id="practicum-file-upload"
-                accept=".xlsx,.xls,.csv,.svg"
-                onChange={(e) => setAttachedFile(e.target.files?.[0] || null)}
-                className="text-xs file:mr-3 file:rounded-md file:border file:border-line file:bg-card file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink hover:file:border-red"
-              />
-              {attachedFile && (
-                <button
-                  type="button"
-                  onClick={() => {
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:gap-6 pt-1">
+              <label className="flex items-center gap-2 text-xs font-medium text-ink cursor-pointer">
+                <input
+                  type="radio"
+                  name="importOption"
+                  value="no"
+                  checked={importOption === "no"}
+                  onChange={() => {
+                    setImportOption("no");
                     setAttachedFile(null);
-                    const inputEl = document.getElementById("practicum-file-upload") as HTMLInputElement;
-                    if (inputEl) inputEl.value = "";
                   }}
-                  className="font-mono text-xs text-red underline-offset-2 hover:underline"
-                >
-                  Batal Lampirkan
-                </button>
-              )}
+                  className="text-ink focus:ring-red"
+                />
+                <span>Tidak, buat jadwal dulu (data praktikan diisi nanti)</span>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs font-medium text-ink cursor-pointer">
+                <input
+                  type="radio"
+                  name="importOption"
+                  value="yes"
+                  checked={importOption === "yes"}
+                  onChange={() => setImportOption("yes")}
+                  className="text-ink focus:ring-red"
+                />
+                <span>Ya, langsung lampirkan berkas (Excel / CSV / SVG)</span>
+              </label>
             </div>
+
+            {/* Kotak Berkas Hanya Muncul Jika Opsi "yes" Dipilih */}
+            {importOption === "yes" && (
+              <div className="mt-3 rounded-md border border-dashed border-ink-soft/40 bg-card p-4 space-y-2">
+                <p className="text-xs text-ink-soft">
+                  Unggah berkas <b>Excel (.xlsx, .xls)</b>, <b>CSV (.csv)</b>, atau <b>SVG (.svg)</b>.
+                  Pastikan terdapat kolom <b>nama</b> (otomatis kapital di tiap awal kata), <b>nim</b>, dan <b>kelas</b> (1 karakter alfabet, otomatis huruf besar).
+                </p>
+                <div className="flex items-center gap-3 pt-1">
+                  <input
+                    type="file"
+                    id="practicum-file-upload"
+                    accept=".xlsx,.xls,.csv,.svg"
+                    onChange={(e) => setAttachedFile(e.target.files?.[0] || null)}
+                    className="text-xs file:mr-3 file:rounded-md file:border file:border-line file:bg-hint file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-ink hover:file:border-red"
+                  />
+                  {attachedFile && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setAttachedFile(null);
+                        const inputEl = document.getElementById("practicum-file-upload") as HTMLInputElement;
+                        if (inputEl) inputEl.value = "";
+                      }}
+                      className="font-mono text-xs text-red underline-offset-2 hover:underline"
+                    >
+                      Batal Lampirkan
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {formError && (

@@ -19,6 +19,48 @@ export interface ImportResult {
 }
 
 /**
+ * Membuat tiap awal/depan kata pada nama berhuruf besar (Capitalize Each Word)
+ */
+export function formatStudentName(name: string): string {
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+  return trimmed
+    .toLowerCase()
+    .split(/\s+/)
+    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ""))
+    .join(" ");
+}
+
+/**
+ * Validasi kolom kelas:
+ * - Hanya ada tepat 1 karakter alfabet saja (misal: A, B, C, a, b)
+ * - Otomatisasi konversi karakter alfabet yang belum kapital menjadi huruf besar (UPPERCASE)
+ */
+export function validateAndFormatClass(className: string): {
+  valid: boolean;
+  formatted: string;
+  error?: string;
+} {
+  const trimmed = className.trim();
+  const alphaMatches = trimmed.match(/[a-zA-Z]/g) || [];
+
+  if (alphaMatches.length !== 1) {
+    return {
+      valid: false,
+      formatted: trimmed,
+      error: `Nilai kelas "${trimmed || "(kosong)"}" tidak valid. Kelas harus memiliki tepat 1 karakter alfabet (contoh: "A", "B", "C").`,
+    };
+  }
+
+  // Otomatisasi menjadi huruf besar
+  const formatted = trimmed.toUpperCase();
+  return {
+    valid: true,
+    formatted,
+  };
+}
+
+/**
  * Memeriksa kecocokan nama kolom berdasarkan aturan:
  * - Mengandung unsur "nama" (case-insensitive)
  * - Mengandung unsur "nim" (case-insensitive)
@@ -33,7 +75,6 @@ function findMatchingColumn(headers: string[], keyword: string): string | undefi
  * Ekstraksi teks dari file SVG (tag <text>, <tspan>, dll)
  */
 function parseSvgContent(svgString: string): Record<string, string>[] {
-  // Ambil semua isi teks di dalam tag <text> atau <tspan>
   const textMatches = Array.from(
     svgString.matchAll(/<(?:text|tspan)[^>]*>([\s\S]*?)<\/(?:text|tspan)>/gi)
   ).map((m) => m[1].replace(/<[^>]+>/g, "").trim()).filter(Boolean);
@@ -42,14 +83,12 @@ function parseSvgContent(svgString: string): Record<string, string>[] {
     return [];
   }
 
-  // Coba periksa apakah SVG berisi format CSV / baris per baris
   const lines: string[] = [];
   for (const text of textMatches) {
     const splitLines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
     lines.push(...splitLines);
   }
 
-  // Jika baris dipisahkan koma atau titik koma
   if (lines.length > 0 && (lines[0].includes(",") || lines[0].includes(";") || lines[0].includes("\t"))) {
     const delimiter = lines[0].includes(",") ? "," : lines[0].includes(";") ? ";" : "\t";
     const headers = lines[0].split(delimiter).map((c) => c.trim().replace(/^["']|["']$/g, ""));
@@ -71,7 +110,8 @@ function parseSvgContent(svgString: string): Record<string, string>[] {
 
 /**
  * Membaca berkas Excel (.xlsx, .xls), CSV (.csv), atau SVG (.svg)
- * dan memvalidasi keberadaan kolom Nama, NIM, dan Kelas.
+ * dan memvalidasi keberadaan kolom Nama, NIM, dan Kelas,
+ * serta memvalidasi nama kapital tiap kata dan kelas 1 alfabet uppercase.
  */
 export function parseAndValidateStudentFile(buffer: Buffer, fileName: string): ImportResult {
   const ext = fileName.split(".").pop()?.toLowerCase() || "";
@@ -143,21 +183,45 @@ export function parseAndValidateStudentFile(buffer: Buffer, fileName: string): I
       };
     }
 
-    // Ambil data praktikan dari baris
+    // Ambil data praktikan dari baris dan validasi format nama serta kelas
     const students: ParsedStudent[] = [];
-    for (const row of rows) {
-      const name = String(row[nameCol!] ?? "").trim();
-      const nim = String(row[nimCol!] ?? "").trim();
-      const className = String(row[classCol!] ?? "").trim();
+    const classValidationErrors: string[] = [];
+
+    for (let idx = 0; idx < rows.length; idx++) {
+      const row = rows[idx];
+      const rawName = String(row[nameCol!] ?? "").trim();
+      const rawNim = String(row[nimCol!] ?? "").trim();
+      const rawClass = String(row[classCol!] ?? "").trim();
 
       // Lewati baris kosong
-      if (!name && !nim && !className) continue;
+      if (!rawName && !rawNim && !rawClass) continue;
+
+      // Validasi kelas: harus ada tepat 1 alfabet dan otomatis uppercase
+      const classCheck = validateAndFormatClass(rawClass);
+      if (!classCheck.valid) {
+        classValidationErrors.push(`Baris ${idx + 2}: ${classCheck.error}`);
+        // Batasi maksimal 3 contoh error agar pesan ringkas
+        if (classValidationErrors.length >= 3) break;
+      }
+
+      // Format nama: tiap awal kata berhuruf besar
+      const formattedName = formatStudentName(rawName);
 
       students.push({
-        name: name || "—",
-        nim: nim || "—",
-        className: className || "—",
+        name: formattedName || "—",
+        nim: rawNim || "—",
+        className: classCheck.formatted || rawClass.toUpperCase(),
       });
+    }
+
+    if (classValidationErrors.length > 0) {
+      return {
+        success: false,
+        students: [],
+        error: `Validasi format kelas gagal! Bagian kelas harus memiliki tepat 1 karakter alfabet (contoh: "A", "B", "C"). Contoh kesalahan yang ditemukan:\n• ${classValidationErrors.join(
+          "\n• "
+        )}`,
+      };
     }
 
     if (students.length === 0) {
