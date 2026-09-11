@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
           fileName: file.name,
           filePath,
           fileType: file.type || mediaTypeOf(file.name),
-          rawText: parsed.kind === "text" ? parsed.text : null,
+          rawText: parsed.rawText || parsed.text,
         },
       });
 
@@ -105,6 +105,16 @@ export async function POST(request: NextRequest) {
               score: c.score,
               comment: c.comment,
               suggestion: c.suggestion,
+            })),
+          },
+          findings: {
+            create: (output.findings || []).map((f) => ({
+              page: f.page ?? null,
+              section: f.section ?? null,
+              line: f.line ?? null,
+              quote: f.quote ?? null,
+              issue: f.issue,
+              suggestion: f.suggestion,
             })),
           },
         },
@@ -124,6 +134,7 @@ export async function POST(request: NextRequest) {
           comment: c.comment,
           suggestion: c.suggestion,
         })),
+        findings: output.findings || [],
       });
     } catch (err) {
       results.push({
@@ -132,6 +143,7 @@ export async function POST(request: NextRequest) {
         error: err instanceof Error ? err.message : "Gagal menilai laporan.",
       });
     }
+
   }
 
   return NextResponse.json({ results });

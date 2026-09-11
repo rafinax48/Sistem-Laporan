@@ -45,7 +45,8 @@ export async function POST(request: NextRequest) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const parsed = await parseReportBuffer(buffer, file.name);
-    if (parsed.kind === "text") rawText = parsed.text;
+    rawText = parsed.rawText || parsed.text;
+
 
     const { filePath } = await saveUpload(buffer, file.name);
     const report = await prisma.report.create({

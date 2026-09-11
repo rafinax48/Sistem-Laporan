@@ -38,6 +38,7 @@ model Assessment {
   referenceReport   Report?    @relation("Reference", fields: [referenceReportId], references: [id])
   overallScore      Int?
   categories        AssessmentCategory[]
+  findings          AssessmentFinding[]
   createdAt         DateTime   @default(now())
 }
 
@@ -52,3 +53,19 @@ model AssessmentCategory {
 
   @@index([assessmentId])
 }
+
+model AssessmentFinding {
+  id           String     @id @default(cuid())
+  assessmentId String
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  page         Int?
+  section      String?
+  line         Int?
+  quote        String?
+  issue        String
+  suggestion   String
+  createdAt    DateTime   @default(now())
+
+  @@index([assessmentId])
+}
+

@@ -12,6 +12,7 @@ export async function GET(
     include: {
       report: true,
       categories: { orderBy: { name: "asc" } },
+      findings: { orderBy: [{ page: "asc" }, { line: "asc" }] },
       referenceReport: { select: { id: true, topic: true, fileName: true } },
     },
   });
@@ -84,6 +85,7 @@ export async function PATCH(
       include: {
         report: true,
         categories: { orderBy: { name: "asc" } },
+        findings: { orderBy: [{ page: "asc" }, { line: "asc" }] },
         referenceReport: { select: { id: true, topic: true, fileName: true } },
       },
     });
@@ -92,3 +94,4 @@ export async function PATCH(
 
   return NextResponse.json({ assessment: updated });
 }
+

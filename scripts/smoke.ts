@@ -68,8 +68,8 @@ async function assessFile(fileName: string, topic: string, studentName: string) 
 }
 
 async function main() {
-  if (!process.env.GEMINI_API_KEY) {
-    console.error("GEMINI_API_KEY belum di-set. Salin .env.example ke .env.local lalu isi key dari AI Studio.");
+  if (!process.env.NINEROUTER_API_KEY && !process.env.GEMINI_API_KEY) {
+    console.error("NINEROUTER_API_KEY belum di-set. Salin .env.example ke .env.local lalu isi key 9router.");
     process.exit(1);
   }
 
@@ -126,6 +126,8 @@ async function main() {
       const detailRes = await fetch(`${BASE}/api/assessment/${id}`);
       const detail = (await detailRes.json()).assessment;
       assert("detail memuat 3 kategori", detail.categories.length, 3);
+      assert("detail memuat array findings", Array.isArray(detail.findings), true);
+
 
       const cat = detail.categories[0];
       const newScore = cat.score === 100 ? 99 : cat.score + 1;

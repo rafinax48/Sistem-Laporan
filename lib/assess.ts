@@ -1,17 +1,37 @@
-import { createGoogle } from "@ai-sdk/google";
+import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output } from "ai";
-import { getGeminiApiKey } from "@/lib/env";
+import { getRouterConfig } from "@/lib/env";
 import {
   AssessmentOutput,
   BAND_NAMES,
   CATEGORY_KEYS,
   CATEGORY_NAMES,
-  GEMINI_MODEL_ID,
 } from "@/lib/types";
 import type { ParseResult } from "@/lib/parse";
 
 function model() {
-  return createGoogle({ apiKey: getGeminiApiKey() })(GEMINI_MODEL_ID);
+  const { apiKey, baseURL, modelId } = getRouterConfig();
+  const provider = createOpenAI({
+    apiKey,
+    baseURL,
+    fetch: async (url, options) => {
+      if (options && options.body && typeof options.body === "string") {
+        try {
+          const parsed = JSON.parse(options.body);
+          if (parsed.stream === undefined) {
+            parsed.stream = false;
+          }
+          if (parsed.response_format?.type === "json_schema") {
+            parsed.response_format = { type: "json_object" };
+          }
+          options = { ...options, body: JSON.stringify(parsed) };
+        } catch {}
+      }
+      return fetch(url, options);
+    },
+  });
+
+  return provider.chat(modelId);
 }
 
 export const ASSESSMENT_BAND_ANCHORS: Record<
@@ -53,15 +73,27 @@ export function buildSystemPrompt(): string {
   }).join("\n\n");
 
   return [
-    "Kamu adalah asisten praktikum yang menilai laporan praktikum mahasiswa.",
-    "Kamu menerima laporan mahasiswa dan laporan referensi (laporan yang dianggap sempurna untuk topik yang sama) sebagai pembanding.",
-    "Berikan skor dan komentar yang adil berdasarkan kualitas laporan mahasiswa, bukan berdasarkan panjang teks.",
-    "Semua komentar dan saran dalam Bahasa Indonesia, kalimat langsung, tanpa basa-basi.",
+    "Kamu adalah asisten praktikum ahli yang menilai laporan praktikum mahasiswa secara menyeluruh.",
+    "Kamu menerima laporan mahasiswa (berisi teks bernomor baris/halaman dan lampiran visual gambar/halaman PDF) serta laporan referensi sebagai tolok ukur topik.",
+    "Periksa seluruh konten secara komprehensif, termasuk teks, diagram, alur algoritma, dan tangkapan layar visual (grafik/output terminal/skema).",
+    "Berikan skor dan komentar yang adil berdasarkan substansi dan ketepatan ilmiah laporan.",
+    "Semua komentar dan saran dalam Bahasa Indonesia, lugas, ramah namun tegas secara akademis.",
+    "Kamu WAJIB selalu mengeluarkan output HANYA berupa format JSON valid sesuai skema tanpa penutup atau pembungkus kode markdown.",
     "",
     `Skor per kategori adalah bilangan bulat 0–100. Band ditentukan oleh skor:\n- 0–49: Tidak Layak\n- 50–80: Lumayan\n- 81–100: Sangat Bagus`,
     "",
     "Rubrik per kategori:",
     categoryLines,
+    "",
+    "INSTRUKSI TEMUAN KESALAHAN SPESIFIK (findings):",
+    "Kamu WAJIB mengidentifikasi titik-titik kesalahan atau bagian yang kurang pada laporan mahasiswa dan memasukkannya ke array 'findings'.",
+    "Setiap objek temuan harus merinci:",
+    "- 'page': nomor halaman (angka integer seperti 1, 2, atau null jika tidak terdeteksi).",
+    "- 'section': bagian/bab laporan (contoh: 'Pendahuluan', 'Dasar Teori', 'Langkah Percobaan', 'Hasil Traversal', 'Pembahasan', 'Kesimpulan').",
+    "- 'line': nomor baris perkiraan (ambil angka dari penanda [L...] atau [H...:L...] di teks jika ada, atau null).",
+    "- 'quote': kutipan kalimat atau deskripsi elemen visual/gambar yang bermasalah.",
+    "- 'issue': penjelasan tepat mengapa bagian ini keliru, kurang akurat, atau tidak lengkap.",
+    "- 'suggestion': rekomendasi perbaikan yang jelas dan dapat langsung dikerjakan oleh praktikan.",
   ].join("\n");
 }
 
@@ -71,25 +103,27 @@ export function buildUserPrompt(
 ): string {
   const parts: string[] = [];
   parts.push("LAPORAN MAHASISWA:");
+  parts.push(student.text || "(teks laporan kosong)");
 
-  if (student.kind === "text") {
-    parts.push(student.text || "(teks kosong)");
-  } else {
+  if (student.images && student.images.length > 0) {
     parts.push(
-      `(file disertakan sebagai lampiran: ${student.filename}, tipe ${student.mediaType}. Analisis isinya dari visual file.)`,
+      "",
+      `Catatan Visual: Disertakan ${student.images.length} gambar/tangkapan halaman visual laporan. Analisis ketepatan gambar, grafik, diagram, atau screenshot output secara menyeluruh.`,
     );
   }
 
   if (reference) {
-    parts.push("", "LAPORAN REFERENSI (pembanding untuk topik yang sama):");
+    parts.push("", "LAPORAN REFERENSI (pembanding topik yang sama):");
     parts.push(reference.text || "(teks referensi kosong)");
   } else {
-    parts.push("", "LAPORAN REFERENSI: (tidak ada, nilai berdasarkan kualitas internal)");
+    parts.push("", "LAPORAN REFERENSI: (tidak ada referensi khusus, nilai berdasarkan standar mutu praktikum)");
   }
 
   parts.push(
     "",
-    "Keluarkan skor, komentar, dan saran untuk tepat 3 kategori: kelengkapan_struktur, kebenaran_isi, kedalaman_analisis.",
+    "Keluarkan hasil dalam JSON dengan:",
+    "1. 'categories': array tepat 3 objek { name, score, comment, suggestion } untuk kelengkapan_struktur, kebenaran_isi, kedalaman_analisis.",
+    "2. 'findings': array objek kesalahan/kekurangan spesifik { page, section, line, quote, issue, suggestion }.",
   );
   return parts.join("\n");
 }
@@ -99,7 +133,7 @@ async function sleep(ms: number) {
 }
 
 /**
- * Panggil Gemini dengan retry + exponential backoff untuk error rate-limit (429)
+ * Panggil 9router dengan retry + exponential backoff untuk error rate-limit (429)
  * dan error transien (5xx). Sequential per laporan diproses di caller.
  */
 async function callAssessWithRetry(
@@ -124,7 +158,7 @@ async function callAssessWithRetry(
     output: Output.object({
       schema: AssessmentOutput,
       name: "assessment",
-      description: "Hasil penilaian laporan praktikum per kategori.",
+      description: "Hasil penilaian laporan praktikum per kategori beserta temuan detail.",
     }),
   };
 
@@ -142,7 +176,7 @@ async function callAssessWithRetry(
                 { type: "text" as const, text: prompt },
                 ...parts.map((p) => ({
                   type: "file" as const,
-                  data: { type: "data" as const, data: p.data },
+                  data: p.data,
                   mediaType: p.mediaType,
                   filename: p.filename,
                 })),
@@ -185,7 +219,7 @@ export type ReferenceInput = {
 
 /**
  * Jalur penilaian utama: jalankan LLM untuk satu laporan lalu hitung band & overall.
- * `fileParts` dipakai saat laporan mahasiswa/referensi berupa scan PDF/gambar (Gemini vision).
+ * Seluruh visual halaman PDF dan gambar dioperasikan langsung via multimodal vision.
  */
 export async function assessReport(
   student: ParseResult,
@@ -194,15 +228,19 @@ export async function assessReport(
   const system = buildSystemPrompt();
   const prompt = buildUserPrompt(student, reference);
 
-  const fileParts = [];
-  if (student.kind === "file") {
-    fileParts.push({
-      type: "file" as const,
-      data: student.data,
-      mediaType: student.mediaType,
-      filename: student.filename,
-    });
+  const fileParts: { type: "file"; data: string; mediaType: string; filename?: string }[] = [];
+
+  if (student.images && student.images.length > 0) {
+    for (const img of student.images) {
+      fileParts.push({
+        type: "file" as const,
+        data: img.data,
+        mediaType: img.mediaType,
+        filename: img.filename,
+      });
+    }
   }
+
   if (reference?.fileData && reference.fileMediaType) {
     fileParts.push({
       type: "file" as const,
@@ -218,3 +256,4 @@ export async function assessReport(
   );
   return { output, overallScore };
 }
+

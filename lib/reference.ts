@@ -48,23 +48,24 @@ export async function findReferenceContext(
   const { readFile } = await import("node:fs/promises");
   try {
     const buffer = await readFile(ref.filePath);
-    const ext = ref.fileName.split(".").pop()?.toLowerCase();
-    const mediaType =
-      ext === "pdf"
-        ? "application/pdf"
-        : ext === "png"
-          ? "image/png"
-          : ext === "jpg" || ext === "jpeg"
-            ? "image/jpeg"
-            : "application/octet-stream";
+    const { parseReportBuffer } = await import("@/lib/parse");
+    const parsed = await parseReportBuffer(buffer, ref.fileName);
+    if (parsed.images && parsed.images.length > 0) {
+      return {
+        id: ref.id,
+        text: parsed.text || "(referensi berupa file visual — disertakan sebagai lampiran)",
+        fileName: ref.fileName,
+        fileData: parsed.images[0].data,
+        fileMediaType: parsed.images[0].mediaType,
+      };
+    }
     return {
       id: ref.id,
-      text: "(referensi berupa file visual — disertakan sebagai lampiran)",
+      text: parsed.text || "(referensi kosong)",
       fileName: ref.fileName,
-      fileData: buffer.toString("base64"),
-      fileMediaType: mediaType,
     };
   } catch {
     return null;
   }
 }
+

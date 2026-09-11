@@ -9,8 +9,10 @@ type ResultItem = {
   assessmentId?: string;
   overallScore?: number;
   overallBand?: string;
+  findings?: { page?: number | null; section?: string | null; line?: number | null; issue: string }[];
   error?: string;
 };
+
 
 const ACCEPT = ".docx,.pdf,.md,.txt,.jpg,.jpeg,.png";
 
@@ -182,13 +184,21 @@ export default function UploadForm({ topics }: { topics: string[] }) {
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium text-ink">{r.fileName}</p>
                 {r.ok ? (
-                  <p className="text-sm text-ink-soft">
-                    Skor {r.overallScore} · {r.overallBand}
-                  </p>
+                  <div className="space-y-0.5">
+                    <p className="text-sm text-ink-soft">
+                      Skor {r.overallScore} · {r.overallBand}
+                    </p>
+                    {r.findings && r.findings.length > 0 && (
+                      <p className="font-mono text-xs text-red font-medium">
+                        {r.findings.length} detail temuan kesalahan (halaman, bagian &amp; baris)
+                      </p>
+                    )}
+                  </div>
                 ) : (
                   <p className="text-sm text-red">{r.error}</p>
                 )}
               </div>
+
               {r.ok && r.assessmentId && (
                 <a
                   href={`/assessment/${r.assessmentId}`}

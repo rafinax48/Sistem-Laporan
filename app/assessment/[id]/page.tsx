@@ -16,6 +16,7 @@ export default async function AssessmentDetailPage({
     include: {
       report: true,
       categories: true,
+      findings: { orderBy: [{ page: "asc" }, { line: "asc" }] },
       referenceReport: { select: { fileName: true, topic: true } },
     },
   });
@@ -70,7 +71,12 @@ export default async function AssessmentDetailPage({
         </p>
       </div>
 
-      <OverrideForm assessmentId={assessment.id} initial={drafts} />
+      <OverrideForm
+        assessmentId={assessment.id}
+        initial={drafts}
+        findings={assessment.findings}
+      />
     </div>
   );
 }
+

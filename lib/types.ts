@@ -1,7 +1,8 @@
 import { z } from "zod";
 
-/** Model Gemini yang dipakai untuk penilaian. Ganti di sini bila penamaan versi/rate limit berubah. */
-export const GEMINI_MODEL_ID = "gemini-2.5-flash";
+/** Model default yang dipakai untuk penilaian via 9router. */
+export const DEFAULT_MODEL_ID = "gemini/gemini-3.5-flash-lite";
+export const GEMINI_MODEL_ID = DEFAULT_MODEL_ID;
 
 export const BAND_NAMES = ["Tidak Layak", "Lumayan", "Sangat Bagus"] as const;
 export type Band = (typeof BAND_NAMES)[number];
@@ -32,13 +33,25 @@ export const AssessmentCategoryInput = z.object({
   suggestion: z.string(),
 });
 
-/** Structured output dari LLM: hanya skor + komentar + saran per kategori. Band & overall dihitung di kode. */
+export const AssessmentFinding = z.object({
+  page: z.number().int().optional().nullable(),
+  section: z.string().optional().nullable(),
+  line: z.number().int().optional().nullable(),
+  quote: z.string().optional().nullable(),
+  issue: z.string(),
+  suggestion: z.string(),
+});
+
+/** Structured output dari LLM: skor + komentar + saran per kategori, serta temuan detail (halaman, bagian, baris). */
 export const AssessmentOutput = z.object({
   categories: z.array(AssessmentCategoryInput).length(3),
+  findings: z.array(AssessmentFinding).default([]),
 });
 
 export type AssessmentCategoryInput = z.infer<typeof AssessmentCategoryInput>;
+export type AssessmentFinding = z.infer<typeof AssessmentFinding>;
 export type AssessmentOutput = z.infer<typeof AssessmentOutput>;
+
 
 export const SUPPORTED_EXTENSIONS = ["docx", "pdf", "md", "txt", "jpg", "jpeg", "png"] as const;
 export type SupportedExtension = (typeof SUPPORTED_EXTENSIONS)[number];

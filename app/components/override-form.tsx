@@ -14,12 +14,24 @@ export type CategoryDraft = {
   suggestion: string;
 };
 
+export type FindingItem = {
+  id?: string;
+  page?: number | null;
+  section?: string | null;
+  line?: number | null;
+  quote?: string | null;
+  issue: string;
+  suggestion: string;
+};
+
 export default function OverrideForm({
   assessmentId,
   initial,
+  findings = [],
 }: {
   assessmentId: string;
   initial: CategoryDraft[];
+  findings?: FindingItem[];
 }) {
   const router = useRouter();
   const [categories, setCategories] = useState<CategoryDraft[]>(initial);
@@ -68,7 +80,7 @@ export default function OverrideForm({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-line bg-card px-5 py-4">
         <div className="flex items-baseline gap-1">
           <span className="font-mono text-5xl font-bold leading-none text-ink">{overall}</span>
@@ -126,6 +138,75 @@ export default function OverrideForm({
         ))}
       </div>
 
+      {findings && findings.length > 0 && (
+        <section className="space-y-4" aria-label="Temuan Kesalahan Detail">
+          <div className="flex items-center justify-between border-b border-line pb-2">
+            <div>
+              <h2 className="font-serif text-xl font-semibold text-ink">
+                Detail Temuan &amp; Kesalahan ({findings.length})
+              </h2>
+              <p className="text-xs text-ink-soft">
+                Pelacakan lokasi halaman, bab/bagian, dan perkiraan baris laporan yang perlu diperbaiki
+              </p>
+            </div>
+            <span className="rounded-full bg-red/10 px-3 py-1 font-mono text-xs font-semibold text-red">
+              {findings.length} Masalah
+            </span>
+          </div>
+
+          <div className="grid gap-3">
+            {findings.map((f, idx) => (
+              <div
+                key={f.id || idx}
+                className="rounded-lg border border-line bg-card p-4 space-y-2.5 transition-colors hover:border-ink-soft"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded bg-ink px-2 py-0.5 font-mono text-xs font-bold text-white">
+                    #{idx + 1}
+                  </span>
+                  {f.page !== null && f.page !== undefined && (
+                    <span className="rounded border border-line bg-hint px-2 py-0.5 font-mono text-xs font-semibold text-ink">
+                      Halaman {f.page}
+                    </span>
+                  )}
+                  {f.line !== null && f.line !== undefined && (
+                    <span className="rounded border border-line bg-hint px-2 py-0.5 font-mono text-xs text-ink">
+                      Baris {f.line}
+                    </span>
+                  )}
+                  {f.section && (
+                    <span className="rounded border border-line bg-paper px-2 py-0.5 text-xs font-medium text-ink-soft">
+                      Bagian: {f.section}
+                    </span>
+                  )}
+                </div>
+
+                {f.quote && (
+                  <blockquote className="rounded border-l-2 border-red bg-hint/60 px-3 py-1.5 font-mono text-xs text-ink italic">
+                    "{f.quote}"
+                  </blockquote>
+                )}
+
+                <div className="grid gap-3 sm:grid-cols-2 text-sm pt-1">
+                  <div className="space-y-1">
+                    <span className="block font-mono text-[11px] uppercase tracking-wider text-red font-semibold">
+                      Kesalahan / Kekurangan:
+                    </span>
+                    <p className="text-ink text-xs leading-relaxed">{f.issue}</p>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="block font-mono text-[11px] uppercase tracking-wider text-[#1E7A46] font-semibold">
+                      Saran Perbaikan:
+                    </span>
+                    <p className="text-ink-soft text-xs leading-relaxed">{f.suggestion}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {message && (
         <p role="status" className="rounded-md border border-green bg-[#E6F4EC] px-3 py-2 text-sm text-[#1E7A46]">
           {message}
@@ -137,7 +218,7 @@ export default function OverrideForm({
         </p>
       )}
 
-      <div className="flex gap-3">
+      <div className="flex gap-3 pt-2">
         <button
           onClick={onSave}
           disabled={busy}
@@ -155,3 +236,4 @@ export default function OverrideForm({
     </div>
   );
 }
+
