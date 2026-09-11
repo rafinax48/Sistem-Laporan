@@ -4,7 +4,7 @@ import { PDFParse } from "pdf-parse";
 import { SUPPORTED_EXTENSIONS } from "@/lib/types";
 
 /** Di bawah ambang ini teks PDF dianggap hasil scan tanpa text-layer → fallback ke Gemini vision. */
-const MIN_PDF_TEXT_CHARS = 80;
+export const MIN_PDF_TEXT_CHARS = 80;
 
 export type FileImagePart = {
   data: string; // base64 string

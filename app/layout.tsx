@@ -49,6 +49,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Beri Nilai
               </Link>
               <Link
+                href="/history"
+                className="rounded-md px-3 py-1.5 text-ink-soft transition-colors hover:text-red"
+              >
+                Riwayat
+              </Link>
+              <Link
+                href="/practicums"
+                className="rounded-md px-3 py-1.5 text-ink-soft transition-colors hover:text-red"
+              >
+                Praktikum
+              </Link>
+              <Link
                 href="/reference"
                 className="rounded-md px-3 py-1.5 text-ink-soft transition-colors hover:text-red"
               >

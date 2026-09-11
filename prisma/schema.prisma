@@ -12,22 +12,59 @@ enum ReportKind {
   REFERENCE
 }
 
+model Practicum {
+  id            String    @id @default(cuid())
+  name          String
+  slot          String
+  totalMeetings Int       @default(8)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  students      Student[]
+  reports       Report[]
+
+  @@index([name])
+}
+
+model Student {
+  id          String     @id @default(cuid())
+  practicumId String
+  practicum   Practicum  @relation(fields: [practicumId], references: [id], onDelete: Cascade)
+  name        String
+  nim         String
+  className   String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  reports     Report[]
+
+  @@index([practicumId])
+  @@index([nim])
+}
+
 model Report {
-  id          String      @id @default(cuid())
-  kind        ReportKind
-  topic       String?
-  studentName String?
-  fileName    String
-  filePath    String
-  fileType    String
-  rawText     String?
-  createdAt   DateTime    @default(now())
+  id            String      @id @default(cuid())
+  kind          ReportKind
+  topic         String?
+  studentName   String?
+  fileName      String
+  filePath      String
+  fileType      String
+  rawText       String?
+  practicumId   String?
+  practicum     Practicum?  @relation(fields: [practicumId], references: [id], onDelete: SetNull)
+  studentId     String?
+  student       Student?    @relation(fields: [studentId], references: [id], onDelete: SetNull)
+  meetingNumber Int?
+  createdAt     DateTime    @default(now())
 
   subjectOf Assessment?  @relation("Subject")
   usedAsRef Assessment[] @relation("Reference")
 
   @@index([kind])
   @@index([topic])
+  @@index([practicumId])
+  @@index([studentId])
 }
 
 model Assessment {

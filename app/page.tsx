@@ -1,8 +1,6 @@
-import Link from "next/link";
 import { prisma } from "@/lib/db";
 import UploadForm from "@/app/components/upload-form";
-import BandBadge from "@/app/components/band-badge";
-import { getBand } from "@/lib/types";
+import HistoryTable, { HistoryItem } from "@/app/components/history-table";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +25,18 @@ export default async function HomePage() {
     .map((r) => r.topic)
     .filter((t): t is string => Boolean(t));
 
+  const formattedHistory: HistoryItem[] = history.map((a) => ({
+    id: a.id,
+    overallScore: a.overallScore,
+    createdAt: a.createdAt.toISOString(),
+    report: {
+      fileName: a.report.fileName,
+      studentName: a.report.studentName,
+      topic: a.report.topic,
+      createdAt: a.report.createdAt.toISOString(),
+    },
+  }));
+
   return (
     <div className="mx-auto w-full max-w-[1100px] px-4 py-10 sm:px-6">
       <div className="mb-8 max-w-2xl">
@@ -43,69 +53,10 @@ export default async function HomePage() {
       <UploadForm topics={topics} />
 
       <section className="mt-12" aria-label="Riwayat penilaian">
-        <h2 className="mb-4 font-serif text-xl font-semibold text-ink">Riwayat</h2>
-        {history.length === 0 ? (
-          <div className="rounded-lg border border-line bg-card px-5 py-10 text-center">
-            <p className="font-serif text-lg font-semibold text-ink">Belum ada penilaian</p>
-            <p className="mt-1 text-sm text-ink-soft">
-              Unggah laporan mahasiswa di atas untuk mulai menilai.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-lg border border-line bg-card">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-line text-left">
-                  <th className="px-4 py-3 font-mono text-xs font-normal uppercase tracking-wider text-ink-soft">
-                    File
-                  </th>
-                  <th className="hidden px-4 py-3 font-mono text-xs font-normal uppercase tracking-wider text-ink-soft sm:table-cell">
-                    Praktikan
-                  </th>
-                  <th className="hidden px-4 py-3 font-mono text-xs font-normal uppercase tracking-wider text-ink-soft md:table-cell">
-                    Topik
-                  </th>
-                  <th className="px-4 py-3 font-mono text-xs font-normal uppercase tracking-wider text-ink-soft">
-                    Skor
-                  </th>
-                  <th className="hidden px-4 py-3 font-mono text-xs font-normal uppercase tracking-wider text-ink-soft lg:table-cell">
-                    Band
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {history.map((a) => (
-                  <tr key={a.id} className="border-b border-line last:border-0 hover:bg-hint">
-                    <td className="px-4 py-3">
-                      <Link
-                        href={`/assessment/${a.id}`}
-                        className="font-medium text-ink underline-offset-2 hover:underline"
-                      >
-                        {a.report.fileName}
-                      </Link>
-                    </td>
-                    <td className="hidden px-4 py-3 text-ink-soft sm:table-cell">
-                      {a.report.studentName || "—"}
-                    </td>
-                    <td className="hidden px-4 py-3 text-ink-soft md:table-cell">
-                      {a.report.topic || "—"}
-                    </td>
-                    <td className="px-4 py-3 font-mono text-base font-semibold text-ink">
-                      {a.overallScore ?? "—"}
-                    </td>
-                    <td className="hidden px-4 py-3 lg:table-cell">
-                      {a.overallScore !== null ? (
-                        <BandBadge band={getBand(a.overallScore)} />
-                      ) : (
-                        <span className="text-ink-soft">—</span>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="font-serif text-xl font-semibold text-ink">Riwayat Terkini</h2>
+        </div>
+        <HistoryTable items={formattedHistory} compact={true} />
       </section>
     </div>
   );

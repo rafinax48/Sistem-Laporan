@@ -183,7 +183,7 @@ export default function OverrideForm({
 
                 {f.quote && (
                   <blockquote className="rounded border-l-2 border-red bg-hint/60 px-3 py-1.5 font-mono text-xs text-ink italic">
-                    "{f.quote}"
+                    &ldquo;{f.quote}&rdquo;
                   </blockquote>
                 )}
 
