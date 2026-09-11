@@ -169,10 +169,16 @@ export async function POST(request: NextRequest) {
         findings: output.findings || [],
       });
     } catch (err) {
+      const errMsg = err instanceof Error ? err.message : "Gagal menilai laporan.";
+      const friendlyError =
+        errMsg.includes("ECONNREFUSED") && errMsg.includes("20128")
+          ? "Gateway AI lokal (9Router) belum aktif di port 20128. Jalankan `npm run router` (atau `9router`) di terminal terlebih dahulu."
+          : errMsg;
+
       results.push({
         ok: false,
         fileName: file.name,
-        error: err instanceof Error ? err.message : "Gagal menilai laporan.",
+        error: friendlyError,
       });
     }
 

@@ -108,22 +108,30 @@ npm install
 ### 3. Konfigurasi Environment Variables
 Salin file `.env.example` menjadi `.env.local` atau `.env`:
 ```bash
-cp .env.example .env
+cp .env.example .env.local
 ```
-Isi kredensial API AI yang Anda gunakan:
+Sesuaikan konfigurasi AI gateway (menggunakan 9Router lokal di port 20128 secara default):
 ```env
-DATABASE_URL="file:./data/dev.db"
-GOOGLE_GENERATIVE_AI_API_KEY="your-gemini-api-key-here"
-# atau OPENAI_API_KEY="your-openai-api-key-here"
+DATABASE_URL="file:./data/app.db"
+NINEROUTER_API_KEY="kunci_api_9router_anda"
+NINEROUTER_BASE_URL="http://127.0.0.1:20128/v1"
+NINEROUTER_MODEL_ID="gemini/gemini-3.5-flash-lite"
 ```
 
 ### 4. Setup Database
-Inisialisasi database SQLite dan jalankan migrasi Prisma:
+Inisialisasi database SQLite dan jalankan push/migrasi Prisma:
 ```bash
-npx prisma migrate dev
+npx prisma db push
 ```
 
-### 5. Jalankan Server Development
+### 5. Jalankan AI Gateway (9Router) & Server Development
+Jalankan gateway AI di background:
+```bash
+npm run router
+# atau jalankan '9router' langsung di terminal
+```
+
+Lalu jalankan server aplikasi Next.js:
 ```bash
 npm run dev
 ```
