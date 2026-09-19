@@ -33,6 +33,7 @@ export async function GET(
           kind: "STUDENT",
           OR: [{ practicumId }, { student: { practicumId } }],
         },
+        orderBy: [{ createdAt: "desc" }],
         include: {
           subjectOf: {
             select: {
@@ -78,6 +79,19 @@ export async function GET(
       if (!rep.studentId || rep.meetingNumber === null) continue;
       if (!matrix[rep.studentId]) {
         matrix[rep.studentId] = {};
+      }
+
+      const existingCell = matrix[rep.studentId][rep.meetingNumber];
+      // Jika sel sudah terisi:
+      // - Prioritaskan laporan yang sudah memiliki penilaian terbit (overallScore !== null)
+      // - Laporan diurutkan createdAt desc sehingga yang terbaru diproses pertama
+      if (existingCell) {
+        if (existingCell.overallScore !== null) {
+          continue; // Pertahankan laporan yang sudah ada nilainya
+        }
+        if (rep.subjectOf?.overallScore === null) {
+          continue; // Lewati draf lama yang tidak ada nilainya
+        }
       }
 
       matrix[rep.studentId][rep.meetingNumber] = {

@@ -2,6 +2,9 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import BandBadge from "@/app/components/band-badge";
+import { getBand, Band } from "@/lib/types";
 
 type ResultItem = {
   ok: boolean;
@@ -13,7 +16,6 @@ type ResultItem = {
   error?: string;
 };
 
-
 const ACCEPT = ".docx,.pdf,.md,.txt,.jpg,.jpeg,.png";
 
 export default function UploadForm({ topics }: { topics: string[] }) {
@@ -22,6 +24,7 @@ export default function UploadForm({ topics }: { topics: string[] }) {
   const [studentName, setStudentName] = useState("");
   const [topic, setTopic] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const [busy, setBusy] = useState(false);
   const [results, setResults] = useState<ResultItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +36,11 @@ export default function UploadForm({ topics }: { topics: string[] }) {
       for (const f of list) dt.items.add(f);
       fileInputRef.current.files = dt.files;
     }
+  }
+
+  function removeFile(indexToRemove: number) {
+    const next = files.filter((_, i) => i !== indexToRemove);
+    setFileList(next);
   }
 
   async function onSubmit(e: React.FormEvent) {
@@ -65,34 +73,47 @@ export default function UploadForm({ topics }: { topics: string[] }) {
   }
 
   return (
-    <section aria-label="Form penilaian laporan">
+    <section aria-label="Form penilaian mandiri" className="space-y-6">
       <form
         onSubmit={onSubmit}
-        className="space-y-5 rounded-lg border border-line bg-card p-6 shadow-[0_1px_2px_rgba(20,33,46,0.04)]"
+        className="space-y-5 rounded-2xl border border-line bg-card p-6 shadow-[0_1px_3px_rgba(11,19,43,0.04)]"
       >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <div className="space-y-1.5">
+        <div className="border-b border-line pb-4">
+          <span className="font-mono text-xs uppercase tracking-wider text-uad-gold font-bold">
+            Evaluasi Mandiri / Batch
+          </span>
+          <h2 className="font-serif text-xl font-bold text-ink mt-0.5">
+            Penilaian Cepat Laporan Mahasiswa
+          </h2>
+          <p className="text-xs text-ink-soft">
+            Gunakan mode ini untuk mengevaluasi satu atau banyak berkas laporan sekaligus tanpa perlu memilih sel matriks pertemuan tertentu.
+          </p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1">
             <label
               htmlFor="studentName"
-              className="block font-mono text-xs uppercase tracking-wider text-ink-soft"
+              className="block font-mono text-xs uppercase tracking-wider text-ink-soft font-semibold"
             >
-              Nama praktikan
+              Nama Praktikan (Opsional)
             </label>
             <input
               id="studentName"
               type="text"
               value={studentName}
               onChange={(e) => setStudentName(e.target.value)}
-              placeholder="Opsional"
-              className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-soft/60 focus:border-red"
+              placeholder="Contoh: Rafi Satya Prayoga"
+              className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-xs text-ink focus:border-uad-gold focus:outline-none"
             />
           </div>
-          <div className="space-y-1.5">
+
+          <div className="space-y-1">
             <label
               htmlFor="topic"
-              className="block font-mono text-xs uppercase tracking-wider text-ink-soft"
+              className="block font-mono text-xs uppercase tracking-wider text-ink-soft font-semibold"
             >
-              Topik praktikum
+              Topik Praktikum
             </label>
             <input
               id="topic"
@@ -100,8 +121,8 @@ export default function UploadForm({ topics }: { topics: string[] }) {
               list="topic-suggestions"
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Cth: Praktikum 5 – BFS & DFS"
-              className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-sm text-ink placeholder:text-ink-soft/60 focus:border-red"
+              placeholder="Pilih atau ketik topik (cth: Praktikum 04)"
+              className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-xs text-ink focus:border-uad-gold focus:outline-none"
             />
             <datalist id="topic-suggestions">
               {topics.map((t) => (
@@ -111,104 +132,177 @@ export default function UploadForm({ topics }: { topics: string[] }) {
           </div>
         </div>
 
-        <label
-          htmlFor="files"
-          className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-line bg-hint px-4 py-10 text-center transition-colors hover:border-ink-soft"
-          onDragOver={(e) => e.preventDefault()}
+        {/* Drag and Drop Zone */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
+          }}
+          onDragLeave={() => setIsDragging(false)}
           onDrop={(e) => {
             e.preventDefault();
+            setIsDragging(false);
             const dropped = Array.from(e.dataTransfer.files);
             if (dropped.length) setFileList(dropped);
           }}
+          onClick={() => fileInputRef.current?.click()}
+          className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-all ${
+            isDragging
+              ? "border-uad-gold bg-[#FEF3C7]/30 scale-[0.99]"
+              : "border-line bg-hint/30 hover:border-uad-gold hover:bg-[#FEF3C7]/15"
+          }`}
         >
-          <span className="font-serif text-base font-semibold text-ink">
-            Letakkan laporan di sini
-          </span>
-          <span className="text-sm text-ink-soft">
-            atau klik untuk memilih beberapa file sekaligus (DOCX, PDF, MD, TXT, JPG, PNG)
-          </span>
+          <span className="text-3xl">📂</span>
+          <div className="space-y-1">
+            <p className="font-serif text-sm font-semibold text-ink">
+              Tarik &amp; letakkan berkas laporan di sini, atau klik untuk memilih
+            </p>
+            <p className="font-mono text-xs text-ink-soft">
+              Mendukung PDF (beserta visual/gambar), DOCX, Markdown (.md), TXT, JPG, PNG
+            </p>
+          </div>
           <input
             id="files"
             ref={fileInputRef}
             type="file"
             accept={ACCEPT}
             multiple
-            required
-            className="sr-only"
+            required={files.length === 0}
+            className="hidden"
             onChange={(e) => setFileList(Array.from(e.target.files ?? []))}
           />
-        </label>
+        </div>
 
+        {/* Daftar File Terpilih */}
         {files.length > 0 && (
-          <ul className="space-y-1.5">
-            {files.map((f, i) => (
-              <li
-                key={`${f.name}-${i}`}
-                className="flex items-center justify-between rounded-md border border-line bg-paper px-3 py-2 text-sm"
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-xs font-semibold text-ink-soft uppercase">
+                {files.length} Berkas Dipilih:
+              </span>
+              <button
+                type="button"
+                onClick={() => setFileList([])}
+                className="font-mono text-[11px] text-red hover:underline"
               >
-                <span className="truncate text-ink">{f.name}</span>
-                <span className="ml-3 shrink-0 font-mono text-xs text-ink-soft">
-                  {Math.max(1, Math.round(f.size / 1024))} KB
-                </span>
-              </li>
-            ))}
-          </ul>
+                Hapus Semua
+              </button>
+            </div>
+            <ul className="max-h-48 overflow-y-auto divide-y divide-line rounded-lg border border-line bg-paper">
+              {files.map((f, i) => (
+                <li
+                  key={`${f.name}-${i}`}
+                  className="flex items-center justify-between px-3 py-2 text-xs"
+                >
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-sm">📄</span>
+                    <span className="truncate font-medium text-ink">{f.name}</span>
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="font-mono text-[11px] text-ink-soft">
+                      {(f.size / 1024).toFixed(1)} KB
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        removeFile(i);
+                      }}
+                      className="text-ink-soft hover:text-red font-mono"
+                      title="Hapus berkas ini"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
 
         {error && (
-          <p role="alert" className="rounded-md border border-red bg-[#FBECEA] px-3 py-2 text-sm text-red">
+          <div className="rounded-lg border border-red/40 bg-[#FEF2F2] p-3 text-xs text-red">
             {error}
-          </p>
+          </div>
         )}
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 pt-2">
           <button
             type="submit"
             disabled={busy || files.length === 0}
-            className="rounded-lg bg-ink px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-ink px-5 py-2.5 font-mono text-xs uppercase tracking-wider font-bold text-white transition-all hover:bg-red disabled:opacity-50 flex items-center gap-2"
           >
-            {busy ? "Menilai…" : "Nilai Sekarang"}
+            {busy ? (
+              <>
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                Mengevaluasi {files.length} Berkas...
+              </>
+            ) : (
+              `Mulai Evaluasi (${files.length} Berkas)`
+            )}
           </button>
-          {busy && <span className="text-sm text-ink-soft">diproses satu per satu agar tidak kena rate-limit</span>}
+          {busy && (
+            <span className="font-mono text-[11px] text-ink-soft">
+              Memproses secara sequential agar stabil &amp; mematuhi batas rate-limit
+            </span>
+          )}
         </div>
       </form>
 
+      {/* Hasil Evaluasi */}
       {results && (
-        <div className="mt-6 space-y-2">
-          <h2 className="font-serif text-xl font-semibold text-ink">Hasil penilaian</h2>
-          {results.map((r, i) => (
-            <div
-              key={i}
-              className="flex items-center justify-between rounded-lg border border-line bg-card px-4 py-3"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-ink">{r.fileName}</p>
-                {r.ok ? (
-                  <div className="space-y-0.5">
-                    <p className="text-sm text-ink-soft">
-                      Skor {r.overallScore} · {r.overallBand}
-                    </p>
-                    {r.findings && r.findings.length > 0 && (
-                      <p className="font-mono text-xs text-red font-medium">
-                        {r.findings.length} detail temuan kesalahan (halaman, bagian &amp; baris)
-                      </p>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between border-b border-line pb-2">
+            <h3 className="font-serif text-lg font-bold text-ink">
+              Hasil Evaluasi Berkas ({results.length})
+            </h3>
+            <span className="font-mono text-xs text-ink-soft">
+              {results.filter((r) => r.ok).length} Berhasil ·{" "}
+              {results.filter((r) => !r.ok).length} Gagal
+            </span>
+          </div>
+
+          <div className="grid gap-3">
+            {results.map((r, i) => (
+              <div
+                key={i}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-xl border border-line bg-card p-4 shadow-xs"
+              >
+                <div className="min-w-0 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <p className="truncate text-xs font-bold text-ink">{r.fileName}</p>
+                    {r.ok && r.overallScore !== undefined && (
+                      <BandBadge band={getBand(r.overallScore) as Band} />
                     )}
                   </div>
-                ) : (
-                  <p className="text-sm text-red">{r.error}</p>
+
+                  {r.ok ? (
+                    <div className="flex flex-wrap items-center gap-3 text-xs text-ink-soft">
+                      <span className="font-mono font-bold text-ink">
+                        Skor: {r.overallScore} / 100
+                      </span>
+                      {r.findings && r.findings.length > 0 && (
+                        <span className="font-mono text-xs text-red font-medium">
+                          • {r.findings.length} temuan kekurangan/kesalahan spesifik
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-red font-medium">{r.error}</p>
+                  )}
+                </div>
+
+                {r.ok && r.assessmentId && (
+                  <Link
+                    href={`/assessment/${r.assessmentId}`}
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-line bg-hint px-3 py-1.5 font-mono text-xs font-semibold text-ink hover:border-ink hover:bg-card transition-colors"
+                  >
+                    Detail Nilai &amp; Temuan →
+                  </Link>
                 )}
               </div>
-
-              {r.ok && r.assessmentId && (
-                <a
-                  href={`/assessment/${r.assessmentId}`}
-                  className="ml-3 shrink-0 rounded-md border border-line bg-hint px-3 py-1.5 text-sm text-ink transition-colors hover:border-ink-soft"
-                >
-                  Lihat detail
-                </a>
-              )}
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </section>

@@ -19,22 +19,61 @@ export interface ImportResult {
 }
 
 /**
- * Membuat tiap awal/depan kata pada nama berhuruf besar (Capitalize Each Word)
+ * Membersihkan format NIM dari Excel (scientific notation, trailing decimals, spasi)
+ */
+export function cleanNim(val: unknown): string {
+  if (val === null || val === undefined) return "";
+  let str = String(val).trim();
+  // Tangani notasi ilmiah dari Excel (misal 2.400018208e+09)
+  if (/^[0-9]+(\.[0-9]+)?[eE]\+[0-9]+$/.test(str)) {
+    const num = Number(str);
+    if (!isNaN(num)) {
+      str = BigInt(Math.round(num)).toString();
+    }
+  }
+  // Hilangkan trailing desimal pecahan .0 atau .00
+  str = str.replace(/\.0+$/, "");
+  // Hilangkan karakter non-alfanumerik di awal/akhir
+  return str.trim();
+}
+
+/**
+ * Membuat tiap awal/depan kata pada nama berhuruf besar (Capitalize Each Word),
+ * menangani tanda kutip (Syafi'i) dan tanda hubung (Nur-Aini).
  */
 export function formatStudentName(name: string): string {
   const trimmed = name.trim();
   if (!trimmed) return "";
   return trimmed
     .toLowerCase()
-    .split(/\s+/)
-    .map((word) => (word ? word.charAt(0).toUpperCase() + word.slice(1) : ""))
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((word) => {
+      if (!word) return "";
+      // Handle tanda hubung seperti Nur-Aini
+      if (word.includes("-")) {
+        return word
+          .split("-")
+          .map((sub) => (sub ? sub.charAt(0).toUpperCase() + sub.slice(1) : ""))
+          .join("-");
+      }
+      // Handle tanda petik seperti Syafi'i atau D'Arcy
+      if (word.includes("'")) {
+        return word
+          .split("'")
+          .map((sub) => (sub ? sub.charAt(0).toUpperCase() + sub.slice(1) : ""))
+          .join("'");
+      }
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    })
     .join(" ");
 }
 
 /**
  * Validasi kolom kelas:
- * - Hanya ada tepat 1 karakter alfabet saja (misal: A, B, C, a, b)
- * - Otomatisasi konversi karakter alfabet yang belum kapital menjadi huruf besar (UPPERCASE)
+ * - Menangani input tunggal seperti "A", "b", atau " C "
+ * - Menangani toleransi format awalan umum seperti "Kelas A", "Praktikum B", "IF-A" -> "A" / "B"
+ * - Otomatisasi konversi karakter alfabet menjadi huruf besar (UPPERCASE)
  */
 export function validateAndFormatClass(className: string): {
   valid: boolean;
@@ -42,21 +81,43 @@ export function validateAndFormatClass(className: string): {
   error?: string;
 } {
   const trimmed = className.trim();
-  const alphaMatches = trimmed.match(/[a-zA-Z]/g) || [];
-
-  if (alphaMatches.length !== 1) {
+  if (!trimmed) {
     return {
       valid: false,
-      formatted: trimmed,
-      error: `Nilai kelas "${trimmed || "(kosong)"}" tidak valid. Kelas harus memiliki tepat 1 karakter alfabet (contoh: "A", "B", "C").`,
+      formatted: "",
+      error: `Kolom kelas tidak boleh kosong. Isikan 1 karakter kelas (contoh: "A", "B", "C").`,
     };
   }
 
-  // Otomatisasi menjadi huruf besar
-  const formatted = trimmed.toUpperCase();
+  // Jika tepat 1 huruf (misal: "A" atau "b")
+  if (/^[a-zA-Z]$/.test(trimmed)) {
+    return { valid: true, formatted: trimmed.toUpperCase() };
+  }
+
+  // Jika berformat awalan seperti "Kelas A", "Kelas-B", "IF A", "Praktikum A"
+  const prefixMatch = trimmed.match(/(?:kelas|praktikum|shift|if|ti)[\s\-_:]*([a-zA-Z])\b/i);
+  if (prefixMatch && prefixMatch[1]) {
+    return { valid: true, formatted: prefixMatch[1].toUpperCase() };
+  }
+
+  // Jika ada sufiks huruf di akhir kata seperti "2A" atau "IF-A"
+  const suffixMatch = trimmed.match(/\b(?:[0-9]+|IF|TI)[\s\-_:]*([a-zA-Z])$/i);
+  if (suffixMatch && suffixMatch[1]) {
+    return { valid: true, formatted: suffixMatch[1].toUpperCase() };
+  }
+
+  const alphaMatches = trimmed.match(/[a-zA-Z]/g) || [];
+  if (alphaMatches.length === 1) {
+    return {
+      valid: true,
+      formatted: alphaMatches[0].toUpperCase(),
+    };
+  }
+
   return {
-    valid: true,
-    formatted,
+    valid: false,
+    formatted: trimmed,
+    error: `Nilai kelas "${trimmed}" tidak valid. Kelas harus berupa 1 karakter alfabet (contoh: "A", "B", "C").`,
   };
 }
 
@@ -190,7 +251,7 @@ export function parseAndValidateStudentFile(buffer: Buffer, fileName: string): I
     for (let idx = 0; idx < rows.length; idx++) {
       const row = rows[idx];
       const rawName = String(row[nameCol!] ?? "").trim();
-      const rawNim = String(row[nimCol!] ?? "").trim();
+      const rawNim = cleanNim(row[nimCol!]);
       const rawClass = String(row[classCol!] ?? "").trim();
 
       // Lewati baris kosong

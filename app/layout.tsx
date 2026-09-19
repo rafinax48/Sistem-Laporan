@@ -19,9 +19,9 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Sistem Penilaian Laporan Praktikum",
+  title: "Sistem Laporan Praktikum · Universitas Ahmad Dahlan",
   description:
-    "Tool asisten praktikum untuk menilai laporan mahasiswa dengan pembanding laporan referensi.",
+    "Portal Asisten Praktikum Laboratorium Informatika UAD — Evaluasi Multimodal Laporan Mahasiswa & Buku Nilai Perkuliahan.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -30,50 +30,72 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="id"
       className={`${fraunces.variable} ${source.variable} ${jetbrains.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <header className="border-b border-line bg-card">
-          <div className="mx-auto flex w-full max-w-[1100px] items-center justify-between px-4 py-3 sm:px-6">
-            <Link href="/" className="flex items-baseline gap-2">
-              <span className="font-serif text-lg font-semibold tracking-tight text-ink">
-                Sistem Penilaian
-              </span>
-              <span className="hidden font-mono text-xs text-ink-soft sm:inline">
-                laporan praktikum
-              </span>
+      <body className="min-h-full flex flex-col bg-paper text-ink selection:bg-amber/20">
+        {/* Header Resmi Laboratorium UAD */}
+        <header className="sticky top-0 z-40 border-b border-line bg-card/90 backdrop-blur-md shadow-[0_1px_2px_rgba(11,19,43,0.03)]">
+          <div className="mx-auto flex w-full max-w-[1240px] items-center justify-between px-4 py-3 sm:px-6">
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-ink text-white shadow-xs group-hover:bg-red transition-colors">
+                <span className="font-mono text-xs font-bold tracking-tighter">UAD</span>
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="font-serif text-base font-semibold tracking-tight text-ink">
+                    Sistem Buku Nilai Praktikum
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#FEF3C7] px-2 py-0.5 font-mono text-[10px] font-bold text-[#B45309]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#D97706] animate-pulse" />
+                    Lab Informatika
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] text-ink-soft">
+                  Universitas Ahmad Dahlan · Evaluasi Laporan Multimodal
+                </span>
+              </div>
             </Link>
+
             <nav className="flex items-center gap-1 font-mono text-xs">
               <Link
                 href="/"
-                className="rounded-md px-3 py-1.5 text-ink-soft transition-colors hover:text-red"
+                className="rounded-md px-3 py-1.5 text-ink font-medium transition-all hover:bg-hint hover:text-ink"
               >
-                Beri Nilai
-              </Link>
-              <Link
-                href="/history"
-                className="rounded-md px-3 py-1.5 text-ink-soft transition-colors hover:text-red"
-              >
-                Riwayat
+                Buku Nilai
               </Link>
               <Link
                 href="/practicums"
-                className="rounded-md px-3 py-1.5 text-ink-soft transition-colors hover:text-red"
+                className="rounded-md px-3 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
               >
-                Praktikum
+                Jadwal &amp; Praktikan
+              </Link>
+              <Link
+                href="/history"
+                className="rounded-md px-3 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
+              >
+                Riwayat Evaluasi
               </Link>
               <Link
                 href="/reference"
-                className="rounded-md px-3 py-1.5 text-ink-soft transition-colors hover:text-red"
+                className="rounded-md px-3 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
               >
-                Referensi
+                Dokumen Referensi
               </Link>
             </nav>
           </div>
         </header>
+
         <main className="flex-1">{children}</main>
-        <footer className="border-t border-line bg-card">
-          <div className="mx-auto flex w-full max-w-[1100px] items-center justify-between px-4 py-4 text-xs text-ink-soft sm:px-6">
-            <span>Penilaian berbasis AI · band ditentukan dari skor</span>
-            <span className="font-mono">0–100</span>
+
+        <footer className="border-t border-line bg-card mt-16">
+          <div className="mx-auto flex w-full max-w-[1240px] flex-col gap-2 px-4 py-5 sm:flex-row sm:items-center sm:justify-between text-xs text-ink-soft sm:px-6">
+            <div className="flex items-center gap-2 font-mono text-[11px]">
+              <span className="h-2 w-2 rounded-full bg-green" />
+              <span>Sistem Penilaian Multimodal · Standar Mutu Akademik UAD</span>
+            </div>
+            <div className="flex items-center gap-3 font-mono text-[11px]">
+              <span>Rubrik: Kelengkapan, Kebenaran, Kedalaman</span>
+              <span className="text-line">|</span>
+              <span className="text-ink font-bold">Skala 0–100</span>
+            </div>
           </div>
         </footer>
       </body>

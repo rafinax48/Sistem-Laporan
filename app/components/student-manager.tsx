@@ -50,6 +50,7 @@ export default function StudentManager({
 
   // State Hapus Praktikan
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [clearingAll, setClearingAll] = useState(false);
 
   // State Edit Praktikan
   const [editingStudent, setEditingStudent] = useState<StudentItem | null>(null);
@@ -154,6 +155,63 @@ export default function StudentManager({
     }
   };
 
+  // Handle Hapus Praktikan Satuan
+  const handleDeleteStudent = async (studentId: string, studentName?: string) => {
+    const confirmMsg = studentName
+      ? `Hapus data praktikan "${studentName}" dari praktikum ini?`
+      : "Hapus data praktikan ini?";
+    if (!confirm(confirmMsg)) return;
+
+    setDeletingId(studentId);
+    try {
+      const res = await fetch(`/api/practicums/${practicumId}/students/${studentId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Gagal menghapus praktikan.");
+      }
+
+      const updated = students.filter((s) => s.id !== studentId);
+      setStudents(updated);
+      onUpdateCount?.(updated.length);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menghapus praktikan.";
+      alert(msg);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  // Handle Hapus Seluruh Praktikan Sekaligus
+  const handleClearAllStudents = async () => {
+    if (students.length === 0) return;
+    const confirmPrompt = confirm(
+      `PERHATIAN: Apakah Anda yakin ingin menghapus SELURUH (${students.length}) data praktikan dari praktikum ini?\n\nTindakan ini tidak dapat dibatalkan.`
+    );
+    if (!confirmPrompt) return;
+
+    setClearingAll(true);
+    try {
+      const res = await fetch(`/api/practicums/${practicumId}/students`, {
+        method: "DELETE",
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Gagal menghapus seluruh praktikan.");
+      }
+
+      setStudents([]);
+      onUpdateCount?.(0);
+      alert(data.message || "Seluruh data praktikan berhasil dihapus.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Gagal menghapus data praktikan.";
+      alert(msg);
+    } finally {
+      setClearingAll(false);
+    }
+  };
+
   // Handle Upload Berkas (Excel, CSV, SVG)
   const handleFileUpload = async (file: File) => {
     setFileError(null);
@@ -192,30 +250,6 @@ export default function StudentManager({
       setFileError(msg);
     } finally {
       setUploadingFile(false);
-    }
-  };
-
-  // Handle Hapus Praktikan
-  const handleDeleteStudent = async (studentId: string) => {
-    if (!confirm("Hapus data praktikan ini?")) return;
-    setDeletingId(studentId);
-    try {
-      const res = await fetch(`/api/practicums/${practicumId}/students/${studentId}`, {
-        method: "DELETE",
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Gagal menghapus praktikan.");
-      }
-
-      const updated = students.filter((s) => s.id !== studentId);
-      setStudents(updated);
-      onUpdateCount?.(updated.length);
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal menghapus.";
-      alert(msg);
-    } finally {
-      setDeletingId(null);
     }
   };
 
@@ -420,15 +454,35 @@ export default function StudentManager({
 
       {/* Tabel Daftar Praktikan */}
       <div className="space-y-3">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="font-serif text-lg font-semibold text-ink">Daftar Praktikan Terdaftar</h3>
-          <input
-            type="text"
-            placeholder="Filter nama, NIM, kelas..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-60 rounded-md border border-line bg-card px-3 py-1.5 text-xs text-ink placeholder:text-ink-soft focus:border-red focus:outline-none"
-          />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h3 className="font-serif text-lg font-semibold text-ink">
+              Daftar Praktikan Terdaftar
+            </h3>
+            <p className="text-xs text-ink-soft">
+              Menampilkan {filteredStudents.length} dari total {students.length} mahasiswa
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              placeholder="Filter nama, NIM, kelas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full sm:w-56 rounded-md border border-line bg-card px-3 py-1.5 text-xs text-ink placeholder:text-ink-soft focus:border-red focus:outline-none"
+            />
+            {students.length > 0 && (
+              <button
+                type="button"
+                onClick={handleClearAllStudents}
+                disabled={clearingAll}
+                className="whitespace-nowrap rounded-md border border-red/30 bg-red/5 px-3 py-1.5 font-mono text-[11px] font-semibold text-red hover:bg-red hover:text-white transition-colors disabled:opacity-50"
+                title="Hapus seluruh praktikan pada praktikum ini"
+              >
+                {clearingAll ? "Menghapus..." : "🗑️ Hapus Semua"}
+              </button>
+            )}
+          </div>
         </div>
 
         {filteredStudents.length === 0 ? (
@@ -468,7 +522,7 @@ export default function StudentManager({
                       </button>
                       <button
                         type="button"
-                        onClick={() => handleDeleteStudent(st.id)}
+                        onClick={() => handleDeleteStudent(st.id, st.name)}
                         disabled={deletingId === st.id}
                         className="font-mono text-[11px] text-red underline-offset-2 hover:underline disabled:opacity-50"
                       >

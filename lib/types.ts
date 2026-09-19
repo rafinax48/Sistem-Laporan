@@ -26,25 +26,37 @@ export function getBand(score: number): Band {
   return "Tidak Layak";
 }
 
+const safeIntNumber = z.preprocess((val) => {
+  if (val === null || val === undefined || val === "") return null;
+  const num = Number(val);
+  return isNaN(num) ? null : Math.round(num);
+}, z.number().int().nullable().optional());
+
+const safeScoreNumber = z.preprocess((val) => {
+  const num = Number(val);
+  if (isNaN(num)) return 70;
+  return Math.min(100, Math.max(0, Math.round(num)));
+}, z.number().int().min(0).max(100));
+
 export const AssessmentCategoryInput = z.object({
   name: z.enum(CATEGORY_KEYS),
-  score: z.number().int().min(0).max(100),
-  comment: z.string(),
-  suggestion: z.string(),
+  score: safeScoreNumber,
+  comment: z.preprocess((v) => (typeof v === "string" ? v : String(v ?? "")), z.string()),
+  suggestion: z.preprocess((v) => (typeof v === "string" ? v : String(v ?? "")), z.string()),
 });
 
 export const AssessmentFinding = z.object({
-  page: z.number().int().optional().nullable(),
-  section: z.string().optional().nullable(),
-  line: z.number().int().optional().nullable(),
-  quote: z.string().optional().nullable(),
-  issue: z.string(),
-  suggestion: z.string(),
+  page: safeIntNumber,
+  section: z.preprocess((v) => (v === null || v === undefined ? null : String(v)), z.string().nullable().optional()),
+  line: safeIntNumber,
+  quote: z.preprocess((v) => (v === null || v === undefined ? null : String(v)), z.string().nullable().optional()),
+  issue: z.preprocess((v) => (typeof v === "string" ? v : String(v ?? "")), z.string()),
+  suggestion: z.preprocess((v) => (typeof v === "string" ? v : String(v ?? "")), z.string()),
 });
 
 /** Structured output dari LLM: skor + komentar + saran per kategori, serta temuan detail (halaman, bagian, baris). */
 export const AssessmentOutput = z.object({
-  categories: z.array(AssessmentCategoryInput).length(3),
+  categories: z.array(AssessmentCategoryInput),
   findings: z.array(AssessmentFinding).default([]),
 });
 

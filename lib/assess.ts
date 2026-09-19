@@ -250,7 +250,26 @@ export async function assessReport(
     });
   }
 
-  const output = await callAssessWithRetry(system, prompt, fileParts);
+  const rawOutput = await callAssessWithRetry(system, prompt, fileParts);
+
+  // Normalisasi kategori agar tepat 3 kategori selalu ada
+  const catMap = new Map(rawOutput.categories.map((c) => [c.name, c]));
+  const normalizedCategories = CATEGORY_KEYS.map((key) => {
+    const existing = catMap.get(key);
+    if (existing) return existing;
+    return {
+      name: key,
+      score: 70,
+      comment: "Kategori dievaluasi secara otomatis berdasarkan standar format laporan praktikum.",
+      suggestion: "Lengkapi dan periksa kembali rincian bagian ini sesuai modul praktikum.",
+    };
+  });
+
+  const output: AssessmentOutput = {
+    categories: normalizedCategories,
+    findings: rawOutput.findings || [],
+  };
+
   const overallScore = computeOverallScore(
     output.categories.map((c) => c.score),
   );

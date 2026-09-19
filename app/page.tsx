@@ -52,6 +52,7 @@ export default async function HomePage() {
             { student: { practicumId: firstPracticum.id } },
           ],
         },
+        orderBy: [{ createdAt: "desc" }],
         include: {
           subjectOf: { select: { id: true, overallScore: true, createdAt: true } },
         },
@@ -76,6 +77,17 @@ export default async function HomePage() {
     for (const rep of reports) {
       if (!rep.studentId || rep.meetingNumber === null) continue;
       if (!matrix[rep.studentId]) matrix[rep.studentId] = {};
+
+      const existingCell = matrix[rep.studentId][rep.meetingNumber];
+      if (existingCell) {
+        if (existingCell.overallScore !== null) {
+          continue;
+        }
+        if (rep.subjectOf?.overallScore === null) {
+          continue;
+        }
+      }
+
       matrix[rep.studentId][rep.meetingNumber] = {
         reportId: rep.id,
         assessmentId: rep.subjectOf?.id || null,

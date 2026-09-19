@@ -1,15 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --ink: #14212e;
-  --ink-soft: #5b6b7c;
-  --paper: #f4f6f5;
+  --ink: #0b132b;
+  --ink-soft: #475569;
+  --paper: #f8fafc;
   --card: #ffffff;
-  --line: #dde3e4;
-  --red: #c0392b;
-  --amber: #b07d1b;
-  --green: #1e7a46;
-  --hint: #eef1f0;
+  --line: #e2e8f0;
+  --line-strong: #cbd5e1;
+  --red: #dc2626;
+  --amber: #d97706;
+  --green: #059669;
+  --hint: #f1f5f9;
+  --uad-gold: #d97706;
 }
 
 @theme inline {
@@ -18,10 +20,12 @@
   --color-paper: var(--paper);
   --color-card: var(--card);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-red: var(--red);
   --color-amber: var(--amber);
   --color-green: var(--green);
   --color-hint: var(--hint);
+  --color-uad-gold: var(--uad-gold);
 
   --font-sans: var(--font-source), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-fraunces), ui-serif, Georgia, serif;
@@ -32,15 +36,46 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-source), ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: color-mix(in srgb, var(--red) 20%, transparent);
+  background: color-mix(in srgb, #0b132b 15%, transparent);
+  color: #0b132b;
 }
 
 :focus-visible {
-  outline: 2px solid var(--red);
+  outline: 2px solid var(--uad-gold);
   outline-offset: 2px;
+}
+
+/* Custom scrollbar untuk tabel matriks */
+.scrollbar-thin::-webkit-scrollbar {
+  height: 7px;
+  width: 7px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

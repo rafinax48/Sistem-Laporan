@@ -105,6 +105,7 @@ export async function POST(request: NextRequest) {
 
   // Sequential: proses satu per satu supaya tidak meledakkan rate-limit Gemini.
   for (const file of files) {
+    let createdReportId: string | null = null;
     try {
       const parsed = await parseReportBuffer(file.buffer, file.name);
       const { filePath } = await saveUpload(file.buffer, file.name);
@@ -123,6 +124,7 @@ export async function POST(request: NextRequest) {
           meetingNumber: meetingNumber !== null ? meetingNumber : null,
         },
       });
+      createdReportId = report.id;
 
       const { output, overallScore } = await assessReport(parsed, reference);
 
@@ -135,18 +137,18 @@ export async function POST(request: NextRequest) {
             create: output.categories.map((c) => ({
               name: c.name,
               score: c.score,
-              comment: c.comment,
-              suggestion: c.suggestion,
+              comment: String(c.comment || "").slice(0, 3000),
+              suggestion: String(c.suggestion || "").slice(0, 3000),
             })),
           },
           findings: {
             create: (output.findings || []).map((f) => ({
-              page: f.page ?? null,
-              section: f.section ?? null,
-              line: f.line ?? null,
-              quote: f.quote ?? null,
-              issue: f.issue,
-              suggestion: f.suggestion,
+              page: typeof f.page === "number" ? f.page : null,
+              section: f.section ? String(f.section).slice(0, 255) : null,
+              line: typeof f.line === "number" ? f.line : null,
+              quote: f.quote ? String(f.quote).slice(0, 1000) : null,
+              issue: String(f.issue || "Perlu perbaikan pada bagian ini").slice(0, 2000),
+              suggestion: String(f.suggestion || "Perbaiki sesuai panduan praktikum").slice(0, 2000),
             })),
           },
         },
@@ -169,6 +171,15 @@ export async function POST(request: NextRequest) {
         findings: output.findings || [],
       });
     } catch (err) {
+      // Rollback: Hapus draft report yang gagal dinilai agar tidak menjadi data orphan
+      if (createdReportId) {
+        try {
+          await prisma.report.delete({ where: { id: createdReportId } });
+        } catch {
+          // ignore cleanup failure
+        }
+      }
+
       const errMsg = err instanceof Error ? err.message : "Gagal menilai laporan.";
       const friendlyError =
         errMsg.includes("ECONNREFUSED") && errMsg.includes("20128")
@@ -181,7 +192,6 @@ export async function POST(request: NextRequest) {
         error: friendlyError,
       });
     }
-
   }
 
   return NextResponse.json({ results });
