@@ -121,6 +121,7 @@ NINEROUTER_MODEL_ID="gemini/gemini-3.5-flash-lite"
 Jalankan sinkronisasi skema database ke SQLite:
 
 ```bash
+npx prisma@latest db push
 npx prisma db push
 ```
 
