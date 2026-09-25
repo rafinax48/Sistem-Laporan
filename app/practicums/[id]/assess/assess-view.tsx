@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import BandBadge from "@/app/components/band-badge";
 import { getBand, Band } from "@/lib/types";
+import { getUserProfile } from "@/lib/user-profile";
 
 interface StudentOption {
   id: string;
@@ -66,6 +67,17 @@ export default function PracticumAssessView({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-select praktikan jika NIM cocok dengan profil tersimpan
+  useEffect(() => {
+    const profile = getUserProfile();
+    if (profile?.nim && students.length > 0) {
+      const match = students.find((s) => s.nim.trim() === profile.nim.trim());
+      if (match) {
+        setSelectedStudentId(match.id);
+      }
+    }
+  }, [students]);
+
   const assessmentStages = [
     "Membedah berkas PDF & mengekstrak konten teks serta nomor baris...",
     "Merender visual halaman & menganalisis tangkapan layar praktikum...",
@@ -113,20 +125,29 @@ export default function PracticumAssessView({
 
     setLoading(true);
     try {
+      const profile = getUserProfile();
       const formData = new FormData();
       formData.append("files", file);
       formData.append("practicumId", practicumId);
       if (activeStudent) {
         formData.append("studentId", activeStudent.id);
         formData.append("studentName", `${activeStudent.name} (${activeStudent.nim})`);
+      } else if (profile?.name) {
+        formData.append("studentName", `${profile.name} (${profile.nim})`);
       }
       formData.append("meetingNumber", String(meetingNumber));
       if (topic.trim()) {
         formData.append("topic", topic.trim());
       }
+      if (profile?.apiKey) {
+        formData.append("apiKey", profile.apiKey);
+      }
 
       const res = await fetch("/api/assess", {
         method: "POST",
+        headers: {
+          ...(profile?.apiKey ? { "x-gemini-api-key": profile.apiKey } : {}),
+        },
         body: formData,
       });
 

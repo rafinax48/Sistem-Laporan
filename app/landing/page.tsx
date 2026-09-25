@@ -3,7 +3,7 @@ import LandingView from "@/app/components/landing-view";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+export default async function LandingPage() {
   const [totalPracticums, totalStudents, totalAssessments] = await Promise.all([
     prisma.practicum.count(),
     prisma.student.count(),

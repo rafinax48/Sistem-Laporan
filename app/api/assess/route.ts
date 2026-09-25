@@ -24,6 +24,13 @@ async function collectFiles(form: FormData): Promise<FileEntry[]> {
 
 export async function POST(request: NextRequest) {
   const form = await request.formData();
+
+  // Ambil API key dari header, cookie, atau form data
+  const formApiKey = typeof form.get("apiKey") === "string" ? (form.get("apiKey") as string).trim() : "";
+  const headerApiKey = request.headers.get("x-gemini-api-key")?.trim() || "";
+  const cookieApiKey = request.cookies.get("gemini_api_key")?.value?.trim() || "";
+  const customApiKey = formApiKey || headerApiKey || cookieApiKey || undefined;
+
   const topicInput = form.get("topic");
   const topic = typeof topicInput === "string" ? topicInput.trim() || null : null;
   const studentNameInput = form.get("studentName");
@@ -126,7 +133,7 @@ export async function POST(request: NextRequest) {
       });
       createdReportId = report.id;
 
-      const { output, overallScore } = await assessReport(parsed, reference);
+      const { output, overallScore } = await assessReport(parsed, reference, customApiKey);
 
       const assessment = await prisma.assessment.create({
         data: {

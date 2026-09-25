@@ -9,10 +9,20 @@ import {
 } from "@/lib/types";
 import type { ParseResult } from "@/lib/parse";
 
-function model() {
-  const { apiKey, baseURL, modelId } = getRouterConfig();
+function model(customApiKey?: string) {
+  const router = getRouterConfig();
+  const activeKey = customApiKey?.trim() || router.apiKey;
+
+  const isDirectGemini = activeKey.startsWith("AIzaSy");
+  const baseURL = isDirectGemini
+    ? "https://generativelanguage.googleapis.com/v1beta/openai/"
+    : router.baseURL;
+  const modelId = isDirectGemini
+    ? "gemini-1.5-flash"
+    : router.modelId;
+
   const provider = createOpenAI({
-    apiKey,
+    apiKey: activeKey,
     baseURL,
     fetch: async (url, options) => {
       if (options && options.body && typeof options.body === "string") {
@@ -141,6 +151,7 @@ async function callAssessWithRetry(
   prompt: string,
   parts?: { type: "file"; data: string; mediaType: string; filename?: string }[],
   maxAttempts = 4,
+  customApiKey?: string,
 ): Promise<AssessmentOutput> {
   const isTransient = (err: unknown): boolean => {
     const status = (err as { statusCode?: number })?.statusCode;
@@ -168,7 +179,7 @@ async function callAssessWithRetry(
       if (parts && parts.length > 0) {
         result = await generateText({
           ...base,
-          model: model(),
+          model: model(customApiKey),
           messages: [
             {
               role: "user" as const,
@@ -187,7 +198,7 @@ async function callAssessWithRetry(
       } else {
         result = await generateText({
           ...base,
-          model: model(),
+          model: model(customApiKey),
           prompt,
         });
       }
@@ -224,6 +235,7 @@ export type ReferenceInput = {
 export async function assessReport(
   student: ParseResult,
   reference: ReferenceInput,
+  customApiKey?: string,
 ): Promise<{ output: AssessmentOutput; overallScore: number }> {
   const system = buildSystemPrompt();
   const prompt = buildUserPrompt(student, reference);
@@ -250,7 +262,7 @@ export async function assessReport(
     });
   }
 
-  const rawOutput = await callAssessWithRetry(system, prompt, fileParts);
+  const rawOutput = await callAssessWithRetry(system, prompt, fileParts, 4, customApiKey);
 
   // Normalisasi kategori agar tepat 3 kategori selalu ada
   const catMap = new Map(rawOutput.categories.map((c) => [c.name, c]));

@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import BandBadge from "@/app/components/band-badge";
 import { getBand, Band } from "@/lib/types";
+import { getUserProfile } from "@/lib/user-profile";
 
 type ResultItem = {
   ok: boolean;
@@ -29,6 +30,13 @@ export default function UploadForm({ topics }: { topics: string[] }) {
   const [results, setResults] = useState<ResultItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    const profile = getUserProfile();
+    if (profile?.name) {
+      setStudentName(`${profile.name} (${profile.nim})`);
+    }
+  }, []);
+
   function setFileList(list: File[]) {
     setFiles(list);
     if (fileInputRef.current) {
@@ -51,13 +59,21 @@ export default function UploadForm({ topics }: { topics: string[] }) {
     setError(null);
     setResults(null);
     try {
+      const profile = getUserProfile();
       const form = new FormData();
       if (studentName.trim()) form.set("studentName", studentName.trim());
       if (topic.trim()) form.set("topic", topic.trim());
+      if (profile?.apiKey) form.set("apiKey", profile.apiKey);
       for (const file of files) {
         form.append("files", file);
       }
-      const res = await fetch("/api/assess", { method: "POST", body: form });
+      const res = await fetch("/api/assess", {
+        method: "POST",
+        headers: {
+          ...(profile?.apiKey ? { "x-gemini-api-key": profile.apiKey } : {}),
+        },
+        body: form,
+      });
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "Gagal menilai laporan.");

@@ -4,6 +4,7 @@ import { useState, useRef, useTransition, useMemo, useEffect } from "react";
 import Link from "next/link";
 import * as XLSX from "xlsx";
 import { getBand, Band } from "@/lib/types";
+import { getUserProfile } from "@/lib/user-profile";
 
 interface StudentData {
   id: string;
@@ -217,6 +218,7 @@ export default function AssessmentMatrix({
     setLoadingAssess(true);
     setModalError(null);
 
+    const profile = getUserProfile();
     const formData = new FormData();
     formData.append("files", selectedFile);
     formData.append("practicumId", practicumId);
@@ -226,10 +228,16 @@ export default function AssessmentMatrix({
     if (isRevision) {
       formData.append("isRevision", "true");
     }
+    if (profile?.apiKey) {
+      formData.append("apiKey", profile.apiKey);
+    }
 
     try {
       const res = await fetch("/api/assess", {
         method: "POST",
+        headers: {
+          ...(profile?.apiKey ? { "x-gemini-api-key": profile.apiKey } : {}),
+        },
         body: formData,
       });
 

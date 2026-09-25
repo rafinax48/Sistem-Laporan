@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Fraunces, JetBrains_Mono, Source_Sans_3 } from "next/font/google";
 import Link from "next/link";
+import UserHeaderProfile from "@/app/components/user-header-profile";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -54,32 +55,43 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
             </Link>
 
-            <nav className="flex items-center gap-1 font-mono text-xs">
-              <Link
-                href="/"
-                className="rounded-md px-3 py-1.5 text-ink font-medium transition-all hover:bg-hint hover:text-ink"
-              >
-                Buku Nilai
-              </Link>
-              <Link
-                href="/practicums"
-                className="rounded-md px-3 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
-              >
-                Jadwal &amp; Praktikan
-              </Link>
-              <Link
-                href="/history"
-                className="rounded-md px-3 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
-              >
-                Riwayat Evaluasi
-              </Link>
-              <Link
-                href="/reference"
-                className="rounded-md px-3 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
-              >
-                Dokumen Referensi
-              </Link>
-            </nav>
+            <div className="flex items-center gap-3">
+              <nav className="flex items-center gap-1 font-mono text-xs overflow-x-auto">
+                <Link
+                  href="/"
+                  className="rounded-md px-2.5 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
+                >
+                  Beranda
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="rounded-md px-2.5 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
+                >
+                  Buku Nilai
+                </Link>
+                <Link
+                  href="/practicums"
+                  className="rounded-md px-2.5 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink"
+                >
+                  Jadwal &amp; Praktikan
+                </Link>
+                <Link
+                  href="/history"
+                  className="rounded-md px-2.5 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink hidden md:inline-block"
+                >
+                  Riwayat
+                </Link>
+                <Link
+                  href="/reference"
+                  className="rounded-md px-2.5 py-1.5 text-ink-soft font-medium transition-all hover:bg-hint hover:text-ink hidden lg:inline-block"
+                >
+                  Referensi
+                </Link>
+              </nav>
+
+              {/* Status Profil & API Key Pengguna */}
+              <UserHeaderProfile />
+            </div>
           </div>
         </header>
 
