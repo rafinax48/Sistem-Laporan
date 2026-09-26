@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const reference = await findReferenceContext(topic);
+  const reference = await findReferenceContext(topic, meetingNumber, practicumId);
   if (!reference) {
     return NextResponse.json(
       {

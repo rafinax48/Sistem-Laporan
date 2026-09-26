@@ -124,18 +124,24 @@ export default async function PracticumGradebookPage({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Link
-            href={`/practicums/${practicum.id}/assess`}
-            className="inline-flex items-center gap-1.5 rounded-md bg-red px-3.5 py-2 font-mono text-xs font-semibold text-white shadow-sm hover:bg-red-deep transition-colors"
+            href={`/practicums/${practicum.id}/curriculum`}
+            className="inline-flex items-center gap-1.5 rounded-md border border-line bg-card px-3.5 py-2 font-mono text-xs font-semibold text-ink hover:border-ink-soft transition-colors"
           >
-            <span>+ Nilai Laporan Baru</span>
+            <span>📖 Silabus & Modul (12)</span>
           </Link>
           <Link
             href={`/practicums/${practicum.id}/students`}
             className="inline-flex items-center gap-1.5 rounded-md border border-line bg-card px-3.5 py-2 font-mono text-xs font-semibold text-ink hover:border-ink-soft transition-colors"
           >
             <span>Kelola Praktikan ({practicum.students.length})</span>
+          </Link>
+          <Link
+            href={`/practicums/${practicum.id}/assess`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-red px-3.5 py-2 font-mono text-xs font-semibold text-white shadow-sm hover:bg-red-deep transition-colors"
+          >
+            <span>+ Nilai Laporan Baru</span>
           </Link>
         </div>
       </div>

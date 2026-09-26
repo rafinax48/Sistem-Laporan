@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { getBasisDataModule, getBasisDataModuleByTopic } from "@/lib/curriculum/basis-data";
 
 export type ReferenceContext = {
   id: string;
@@ -10,11 +11,17 @@ export type ReferenceContext = {
 
 /**
  * Cari laporan referensi untuk dipakai sebagai pembanding.
- * Prioritas: referensi spesifik dengan topic sama → referensi generik (topic=null).
- * Tidak ada yang cocok → kembalikan null (assess diblok).
+ * Prioritas:
+ * 1. Referensi spesifik per praktikum & pertemuan (meetingNumber + practicumId).
+ * 2. Referensi pertemuan (meetingNumber).
+ * 3. Referensi dengan nama topik sama.
+ * 4. Modul Kurikulum Resmi Basis Data 2026 (fallback instan dari buku modul).
+ * 5. Referensi generik (topic=null).
  */
 export async function findReferenceContext(
   topic?: string | null,
+  meetingNumber?: number | null,
+  practicumId?: string | null,
 ): Promise<ReferenceContext> {
   let ref: {
     id: string;
@@ -23,13 +30,57 @@ export async function findReferenceContext(
     filePath: string;
   } | null = null;
 
-  if (topic && topic.trim()) {
+  // 1. Cek referensi spesifik meetingNumber + practicumId
+  if (meetingNumber && practicumId) {
+    ref = await prisma.report.findFirst({
+      where: { kind: "REFERENCE", meetingNumber, practicumId },
+      select: { id: true, rawText: true, fileName: true, filePath: true },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  // 2. Cek referensi meetingNumber global
+  if (!ref && meetingNumber) {
+    ref = await prisma.report.findFirst({
+      where: { kind: "REFERENCE", meetingNumber },
+      select: { id: true, rawText: true, fileName: true, filePath: true },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  // 3. Cek referensi berdasarkan nama topik
+  if (!ref && topic && topic.trim()) {
     ref = await prisma.report.findFirst({
       where: { kind: "REFERENCE", topic: topic.trim() },
       select: { id: true, rawText: true, fileName: true, filePath: true },
       orderBy: { createdAt: "desc" },
     });
   }
+
+  // 4. Fallback ke Modul Resmi Kurikulum Basis Data 2026
+  if (!ref && meetingNumber) {
+    const curModule = getBasisDataModule(meetingNumber);
+    if (curModule) {
+      return {
+        id: `curriculum-p${meetingNumber}`,
+        text: curModule.referenceMarkdown,
+        fileName: `Modul_Resmi_P${meetingNumber}_${curModule.topic.replace(/[^a-zA-Z0-9]/g, "_")}.md`,
+      };
+    }
+  }
+
+  if (!ref && topic) {
+    const curModule = getBasisDataModuleByTopic(topic);
+    if (curModule) {
+      return {
+        id: `curriculum-p${curModule.meetingNumber}`,
+        text: curModule.referenceMarkdown,
+        fileName: `Modul_Resmi_P${curModule.meetingNumber}_${curModule.topic.replace(/[^a-zA-Z0-9]/g, "_")}.md`,
+      };
+    }
+  }
+
+  // 5. Cek referensi generik (topic = null)
   if (!ref) {
     ref = await prisma.report.findFirst({
       where: { kind: "REFERENCE", topic: null },

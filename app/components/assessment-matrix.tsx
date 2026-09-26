@@ -5,6 +5,7 @@ import Link from "next/link";
 import * as XLSX from "xlsx";
 import { getBand, Band } from "@/lib/types";
 import { getUserProfile } from "@/lib/user-profile";
+import { getBasisDataModule } from "@/lib/curriculum/basis-data";
 
 interface StudentData {
   id: string;
@@ -203,6 +204,10 @@ export default function AssessmentMatrix({
     setIsRevision(revision);
     setSelectedFile(null);
     setModalError(null);
+    const mod = getBasisDataModule(meeting);
+    if (mod) {
+      setSelectedTopic(mod.topic);
+    }
     setModalOpen(true);
   };
 
@@ -538,14 +543,23 @@ export default function AssessmentMatrix({
                   <th className="px-3 py-3 min-w-[60px] border-r border-line text-center">
                     Kelas
                   </th>
-                  {meetings.map((m) => (
-                    <th
-                      key={m}
-                      className="px-3 py-3 min-w-[115px] text-center border-r border-line bg-[#E2E8F0]/40 font-bold"
-                    >
-                      P{m < 10 ? `0${m}` : m}
-                    </th>
-                  ))}
+                  {meetings.map((m) => {
+                    const mod = getBasisDataModule(m);
+                    return (
+                      <th
+                        key={m}
+                        className="px-2.5 py-2.5 min-w-[115px] text-center border-r border-line bg-[#E2E8F0]/40 font-bold group cursor-pointer hover:bg-[#E2E8F0]/80 transition-colors"
+                        title={mod ? `P${m}: ${mod.topic}` : `Pertemuan ${m}`}
+                      >
+                        <div className="text-ink">P{m < 10 ? `0${m}` : m}</div>
+                        {mod && (
+                          <div className="text-[9px] font-normal text-ink-soft truncate max-w-[100px] mx-auto">
+                            {mod.topic.split(" ")[0]}...
+                          </div>
+                        )}
+                      </th>
+                    );
+                  })}
                   <th className="px-4 py-3 min-w-[85px] text-center font-bold text-ink bg-hint">
                     Rata²
                   </th>
@@ -715,19 +729,39 @@ export default function AssessmentMatrix({
               <form onSubmit={handleAssessSubmit} className="space-y-4">
                 {/* Pilihan Topik Referensi */}
                 <div>
-                  <label className="block font-mono text-[11px] uppercase tracking-wider text-ink-soft mb-1 font-semibold">
-                    Topik Referensi Pembanding *
-                  </label>
-                  {referenceTopics.length === 0 ? (
-                    <div className="rounded-lg border border-amber/40 bg-[#FFFBEB] p-3 text-xs text-[#92400E]">
-                      Belum ada laporan referensi yang tersedia. Buat laporan referensi terlebih dahulu di tab <b>Dokumen Referensi</b>.
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-mono text-[11px] uppercase tracking-wider text-ink-soft font-semibold">
+                      Modul / Topik Referensi Acuan *
+                    </label>
+                    {getBasisDataModule(activeMeeting) && (
+                      <span className="font-mono text-[10px] bg-red/10 text-red px-1.5 py-0.5 rounded font-bold">
+                        Modul Resmi P{activeMeeting}
+                      </span>
+                    )}
+                  </div>
+
+                  {getBasisDataModule(activeMeeting) && (
+                    <div className="mb-2 rounded-lg border border-red/20 bg-red/5 p-2.5 text-xs text-ink">
+                      <div className="font-bold text-red font-mono text-[11px]">
+                        Pertemuan {activeMeeting}: {getBasisDataModule(activeMeeting)?.topic}
+                      </div>
+                      <div className="text-[11px] text-ink-soft mt-0.5">
+                        Standar materi dan rubrik penilaian otomatis dimuat dari modul resmi Basis Data 2026.
+                      </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {referenceTopics.length > 0 && (
                     <select
                       value={selectedTopic}
                       onChange={(e) => setSelectedTopic(e.target.value)}
                       className="w-full rounded-lg border border-line bg-paper px-3 py-2 text-xs text-ink focus:border-uad-gold focus:outline-none"
                     >
+                      {getBasisDataModule(activeMeeting) && !referenceTopics.includes(getBasisDataModule(activeMeeting)!.topic) && (
+                        <option value={getBasisDataModule(activeMeeting)!.topic}>
+                          [Modul Resmi] {getBasisDataModule(activeMeeting)!.topic}
+                        </option>
+                      )}
                       {referenceTopics.map((t) => (
                         <option key={t} value={t}>
                           {t}
@@ -786,7 +820,11 @@ export default function AssessmentMatrix({
                   </button>
                   <button
                     type="submit"
-                    disabled={loadingAssess || !selectedFile || referenceTopics.length === 0}
+                    disabled={
+                      loadingAssess ||
+                      !selectedFile ||
+                      (referenceTopics.length === 0 && !getBasisDataModule(activeMeeting))
+                    }
                     className="rounded-lg bg-ink px-4 py-2 font-mono text-xs uppercase tracking-wider text-white transition-colors hover:bg-red disabled:opacity-50 flex items-center gap-2 font-bold"
                   >
                     {isRevision ? "Nilai Ulang (Perbaikan)" : "Mulai Evaluasi AI"}
